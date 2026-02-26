@@ -324,8 +324,10 @@ class DigitalStoreBackendTest:
         response = self.make_request("POST", "/discounts/validate", validate_data)
         if response and response.status_code == 400:
             self.log_result("Invalid Discount Validation", True, "Correctly rejected invalid discount code")
+            return True
         else:
             self.log_result("Invalid Discount Validation", False, f"Should reject invalid code, got: {response.status_code if response else 'No response'}")
+            return False
 
     def test_admin_protected_endpoints(self):
         """Test that admin-protected endpoints correctly reject non-admin users"""
