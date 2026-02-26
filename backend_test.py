@@ -159,6 +159,8 @@ class DigitalStoreBackendTest:
         """Test public endpoints that don't require authentication"""
         print("\n=== Testing Public Endpoints ===")
         
+        success = True
+        
         # Test GET categories (public)
         response = self.make_request("GET", "/categories")
         if response and response.status_code == 200:
@@ -169,6 +171,7 @@ class DigitalStoreBackendTest:
                 self.category_id = categories[0].get('id')
         else:
             self.log_result("Get Categories", False, f"Failed: {response.status_code if response else 'No response'}")
+            success = False
 
         # Test GET products (public)
         response = self.make_request("GET", "/products")
@@ -182,6 +185,7 @@ class DigitalStoreBackendTest:
                 self.log_result("Product Stock Info", True, f"First product has {product_stock} codes available")
         else:
             self.log_result("Get Products", False, f"Failed: {response.status_code if response else 'No response'}")
+            success = False
 
         # Test product search
         if self.product_id:
@@ -191,6 +195,7 @@ class DigitalStoreBackendTest:
                 self.log_result("Get Product Details", True, f"Product details: {product.get('name', 'N/A')}")
             else:
                 self.log_result("Get Product Details", False, f"Failed: {response.status_code if response else 'No response'}")
+                success = False
 
         # Test product filtering by category
         if self.category_id:
@@ -200,6 +205,9 @@ class DigitalStoreBackendTest:
                 self.log_result("Filter Products by Category", True, f"Found {len(filtered_products)} products in category")
             else:
                 self.log_result("Filter Products by Category", False, f"Failed: {response.status_code if response else 'No response'}")
+                success = False
+                
+        return success
 
     def test_order_creation(self):
         """Test order creation (user functionality)"""
