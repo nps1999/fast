@@ -74,6 +74,8 @@ class DigitalStoreBackendTest:
             has_admin = response.json().get('hasAdmin', False)
             if has_admin:
                 self.log_result("Admin Check", True, "Admin already exists")
+                # Try to login with a few common admin credentials
+                return self.test_existing_admin_login()
             else:
                 self.log_result("Admin Check", True, "No admin exists, proceeding with setup")
         else:
@@ -96,7 +98,7 @@ class DigitalStoreBackendTest:
                 return True
             elif response.status_code == 400 and "يوجد مدير بالفعل" in response.text:
                 self.log_result("Admin Setup", True, "Admin already exists, testing login instead")
-                return self.test_admin_login()
+                return self.test_existing_admin_login()
             else:
                 self.log_result("Admin Setup", False, f"Failed with status {response.status_code}: {response.text}")
         else:
