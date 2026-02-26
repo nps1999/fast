@@ -124,10 +124,6 @@ class DigitalStoreBackendTest:
         
         self.log_result("Existing Admin Login", False, "Could not login with any common admin credentials")
         return False
-        else:
-            self.log_result("Admin Setup", False, "No response from server")
-        
-        return False
         
     def test_admin_login(self):
         """Test admin login"""
