@@ -577,8 +577,12 @@ async function handleSettings(path, method, request, db) {
       settings = {
         id: 'main', siteName: 'FAST STORE',
         primaryColor: '#8b5cf6', secondaryColor: '#22d3ee',
-        contactEmail: '', contactPhone: '', contactWhatsapp: '',
-        socialLinks: { twitter: '', instagram: '', discord: '', telegram: '' }
+        contactEmail: '', contactPhone: '',
+        whatsapp: '', discord: '', telegram: '',
+        heroTitle: '', heroSubtitle: '',
+        footerText: 'جميع الحقوق محفوظة',
+        currencies: ['USD', 'SAR', 'KWD', 'AED'],
+        defaultCurrency: 'USD'
       };
       await db.collection('settings').insertOne(settings);
     }
