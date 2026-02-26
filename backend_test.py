@@ -101,6 +101,29 @@ class DigitalStoreBackendTest:
                 return self.test_existing_admin_login()
             else:
                 self.log_result("Admin Setup", False, f"Failed with status {response.status_code}: {response.text}")
+    def test_existing_admin_login(self):
+        """Try to login with existing admin using common credentials"""
+        # Try different common admin credentials
+        admin_credentials = [
+            {"email": "admin@test.com", "password": "admin123"},
+            {"email": "admin@digitalstore.test", "password": "admin123456"},
+            {"email": "admin@example.com", "password": "admin123"},
+            {"email": "admin@localhost", "password": "admin123"},
+            {"email": "test@test.com", "password": "test123"}
+        ]
+        
+        for creds in admin_credentials:
+            response = self.make_request("POST", "/auth/login", creds)
+            if response and response.status_code == 200:
+                data = response.json()
+                user = data.get('user', {})
+                if user.get('role') == 'admin':
+                    self.admin_token = data.get('token')
+                    self.log_result("Existing Admin Login", True, f"Successfully logged in admin: {creds['email']}")
+                    return True
+        
+        self.log_result("Existing Admin Login", False, "Could not login with any common admin credentials")
+        return False
         else:
             self.log_result("Admin Setup", False, "No response from server")
         
