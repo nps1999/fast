@@ -284,6 +284,8 @@ class DigitalStoreBackendTest:
             self.log_result("Reviews Setup", False, "Missing user token or product ID")
             return False
 
+        success = True
+
         # Test GET reviews by product (public)
         response = self.make_request("GET", f"/reviews?productId={self.product_id}")
         if response and response.status_code == 200:
@@ -291,6 +293,7 @@ class DigitalStoreBackendTest:
             self.log_result("Get Product Reviews", True, f"Retrieved {len(reviews)} reviews")
         else:
             self.log_result("Get Product Reviews", False, f"Failed: {response.status_code if response else 'No response'}")
+            success = False
 
         # Test POST review (user must be logged in)
         review_data = {
@@ -308,6 +311,9 @@ class DigitalStoreBackendTest:
                 self.log_result("Create Review", True, "Review creation handled (user may have already reviewed)")
             else:
                 self.log_result("Create Review", False, f"Failed: {response.status_code if response else 'No response'}")
+                success = False
+                
+        return success
 
     def test_discount_validation(self):
         """Test discount validation (public endpoint)"""
