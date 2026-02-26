@@ -337,6 +337,8 @@ class DigitalStoreBackendTest:
             self.log_result("Admin Access Control Setup", False, "No user token available")
             return False
 
+        success = True
+
         # Test admin-only category creation
         category_data = {"name": "Unauthorized Category", "active": True}
         response = self.make_request("POST", "/categories", category_data, token=self.user_token)
@@ -344,6 +346,7 @@ class DigitalStoreBackendTest:
             self.log_result("Category Creation Access Control", True, "Correctly rejected non-admin user")
         else:
             self.log_result("Category Creation Access Control", False, f"Should reject non-admin, got: {response.status_code if response else 'No response'}")
+            success = False
 
         # Test admin-only product creation
         product_data = {"name": "Unauthorized Product", "price": 10}
@@ -352,6 +355,7 @@ class DigitalStoreBackendTest:
             self.log_result("Product Creation Access Control", True, "Correctly rejected non-admin user")
         else:
             self.log_result("Product Creation Access Control", False, f"Should reject non-admin, got: {response.status_code if response else 'No response'}")
+            success = False
 
         # Test admin-only codes endpoint
         response = self.make_request("GET", "/codes?productId=test", token=self.user_token)
@@ -359,6 +363,9 @@ class DigitalStoreBackendTest:
             self.log_result("Codes Access Control", True, "Correctly rejected non-admin user")
         else:
             self.log_result("Codes Access Control", False, f"Should reject non-admin, got: {response.status_code if response else 'No response'}")
+            success = False
+            
+        return success
 
     def test_input_validation(self):
         """Test input validation and error handling"""
