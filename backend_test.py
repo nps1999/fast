@@ -371,6 +371,8 @@ class DigitalStoreBackendTest:
         """Test input validation and error handling"""
         print("\n=== Testing Input Validation ===")
         
+        success = True
+
         # Test registration with missing fields
         incomplete_data = {"email": "incomplete@test.com"}
         response = self.make_request("POST", "/auth/register", incomplete_data)
@@ -378,6 +380,7 @@ class DigitalStoreBackendTest:
             self.log_result("Registration Validation", True, "Correctly rejected incomplete registration data")
         else:
             self.log_result("Registration Validation", False, f"Should reject incomplete data, got: {response.status_code if response else 'No response'}")
+            success = False
 
         # Test login with wrong credentials
         wrong_creds = {"email": "nonexistent@test.com", "password": "wrongpass"}
@@ -386,6 +389,7 @@ class DigitalStoreBackendTest:
             self.log_result("Login Validation", True, "Correctly rejected wrong credentials")
         else:
             self.log_result("Login Validation", False, f"Should reject wrong credentials, got: {response.status_code if response else 'No response'}")
+            success = False
 
         # Test order with empty cart
         if self.user_token:
@@ -395,6 +399,9 @@ class DigitalStoreBackendTest:
                 self.log_result("Empty Cart Validation", True, "Correctly rejected empty cart")
             else:
                 self.log_result("Empty Cart Validation", False, f"Should reject empty cart, got: {response.status_code if response else 'No response'}")
+                success = False
+                
+        return success
 
     def run_all_tests(self):
         """Run all backend tests"""
