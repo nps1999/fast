@@ -733,12 +733,68 @@ async function handleStats(path, method, request, db) {
   });
 }
 
+// ============ UPLOAD ============
+async function handleUpload(pathParts, method, request, db) {
+  if (method !== 'POST') return res({ error: 'Method not allowed' }, 405);
+  const user = await getUser(request, db);
+  if (!user || user.role !== 'admin') return res({ error: 'غير مصرح' }, 403);
+
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file');
+    if (!file) return res({ error: 'لم يتم تحديد ملف' }, 400);
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+    if (!allowedTypes.includes(file.type)) return res({ error: 'نوع الملف غير مسموح. يسمح فقط بالصور' }, 400);
+
+    // Validate file size (5MB max)
+    const bytes = await file.arrayBuffer();
+    if (bytes.byteLength > 5 * 1024 * 1024) return res({ error: 'حجم الملف كبير جداً (الحد الأقصى 5MB)' }, 400);
+
+    const buffer = Buffer.from(bytes);
+    const ext = file.name.split('.').pop().toLowerCase();
+    const safeName = `${uuidv4()}.${ext}`;
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+    await fs.mkdir(uploadDir, { recursive: true });
+    await fs.writeFile(path.join(uploadDir, safeName), buffer);
+    return res({ url: `/uploads/${safeName}` }, 201);
+  } catch (e) {
+    console.error('Upload error:', e);
+    return res({ error: 'فشل رفع الملف' }, 500);
+  }
+}
+
+// ============ EXCHANGE RATES ============
+async function handleExchangeRates(pathParts, method, request, db) {
+  if (method !== 'GET') return res({ error: 'Method not allowed' }, 405);
+  const rates = await getExchangeRates();
+  // Return only the currencies we need
+  const filtered = {
+    USD: 1,
+    SAR: rates?.SAR || 3.75,
+    KWD: rates?.KWD || 0.31,
+    AED: rates?.AED || 3.67,
+  };
+  return res({ rates: filtered, cachedAt: ratesCacheTime });
+}
+
 // ============ MAIN ROUTER ============
 async function handler(request, context) {
+  // Security headers
+  const secHeaders = {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  };
+
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, {
       status: 200,
       headers: {
+        ...secHeaders,
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -746,30 +802,43 @@ async function handler(request, context) {
     });
   }
 
+  // Rate limiting
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+  if (!rateLimit(ip, 120, 60000)) {
+    return NextResponse.json({ error: 'تم تجاوز الحد المسموح من الطلبات. حاول لاحقاً' }, { status: 429, headers: secHeaders });
+  }
+
   try {
-    const path = context.params?.path || [];
+    const routePath = context.params?.path || [];
     const method = request.method;
-    const resource = path[0];
+    const resource = routePath[0];
     const db = await getDb();
 
+    let response;
     switch (resource) {
-      case 'auth': return await handleAuth(path.slice(1), method, request, db);
-      case 'categories': return await handleCategories(path.slice(1), method, request, db);
-      case 'products': return await handleProducts(path.slice(1), method, request, db);
-      case 'codes': return await handleCodes(path.slice(1), method, request, db);
-      case 'orders': return await handleOrders(path.slice(1), method, request, db);
-      case 'reviews': return await handleReviews(path.slice(1), method, request, db);
-      case 'discounts': return await handleDiscounts(path.slice(1), method, request, db);
-      case 'settings': return await handleSettings(path.slice(1), method, request, db);
-      case 'users': return await handleUsers(path.slice(1), method, request, db);
-      case 'sliders': return await handleSliders(path.slice(1), method, request, db);
-      case 'faqs': return await handleFaqs(path.slice(1), method, request, db);
-      case 'stats': return await handleStats(path.slice(1), method, request, db);
-      default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      case 'auth': response = await handleAuth(routePath.slice(1), method, request, db); break;
+      case 'categories': response = await handleCategories(routePath.slice(1), method, request, db); break;
+      case 'products': response = await handleProducts(routePath.slice(1), method, request, db); break;
+      case 'codes': response = await handleCodes(routePath.slice(1), method, request, db); break;
+      case 'orders': response = await handleOrders(routePath.slice(1), method, request, db); break;
+      case 'reviews': response = await handleReviews(routePath.slice(1), method, request, db); break;
+      case 'discounts': response = await handleDiscounts(routePath.slice(1), method, request, db); break;
+      case 'settings': response = await handleSettings(routePath.slice(1), method, request, db); break;
+      case 'users': response = await handleUsers(routePath.slice(1), method, request, db); break;
+      case 'sliders': response = await handleSliders(routePath.slice(1), method, request, db); break;
+      case 'faqs': response = await handleFaqs(routePath.slice(1), method, request, db); break;
+      case 'stats': response = await handleStats(routePath.slice(1), method, request, db); break;
+      case 'upload': response = await handleUpload(routePath.slice(1), method, request, db); break;
+      case 'exchange-rates': response = await handleExchangeRates(routePath.slice(1), method, request, db); break;
+      default: response = NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
+
+    // Add security headers to all responses
+    Object.entries(secHeaders).forEach(([k, v]) => response.headers.set(k, v));
+    return response;
   } catch (error) {
     console.error('API Error:', error);
-    return NextResponse.json({ error: error.message || 'خطأ في السيرفر' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'خطأ في السيرفر' }, { status: 500, headers: secHeaders });
   }
 }
 
