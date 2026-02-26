@@ -2,6 +2,54 @@ import { NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
+import fs from 'fs/promises';
+import path from 'path';
+
+// ============ SECURITY: RATE LIMITER ============
+const rateLimitMap = new Map();
+function rateLimit(ip, limit = 60, windowMs = 60000) {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip) || { count: 0, resetAt: now + windowMs };
+  if (now > record.resetAt) {
+    record.count = 0;
+    record.resetAt = now + windowMs;
+  }
+  record.count++;
+  rateLimitMap.set(ip, record);
+  // Cleanup old entries periodically
+  if (rateLimitMap.size > 10000) {
+    for (const [key, val] of rateLimitMap) {
+      if (now > val.resetAt) rateLimitMap.delete(key);
+    }
+  }
+  return record.count <= limit;
+}
+
+function sanitize(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/[<>]/g, '').trim();
+}
+
+// ============ EXCHANGE RATES CACHE ============
+let cachedRates = null;
+let ratesCacheTime = 0;
+
+async function getExchangeRates() {
+  const now = Date.now();
+  if (cachedRates && (now - ratesCacheTime) < 3600000) return cachedRates;
+  try {
+    const key = process.env.EXCHANGE_RATE_API_KEY;
+    if (!key) return { USD: 1, SAR: 3.75, KWD: 0.31, AED: 3.67 };
+    const response = await fetch(`https://v6.exchangerate-api.com/v6/${key}/latest/USD`);
+    const data = await response.json();
+    if (data.result === 'success') {
+      cachedRates = data.conversion_rates;
+      ratesCacheTime = now;
+      return cachedRates;
+    }
+  } catch (e) { console.error('Exchange rate error:', e); }
+  return cachedRates || { USD: 1, SAR: 3.75, KWD: 0.31, AED: 3.67 };
+}
 
 // ============ DATABASE ============
 let cachedClient = null;
