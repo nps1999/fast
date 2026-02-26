@@ -594,7 +594,7 @@ async function handleSettings(path, method, request, db) {
     if (!user || user.role !== 'admin') return res({ error: 'غير مصرح' }, 403);
     const body = await request.json();
     const updates = {};
-    ['siteName', 'primaryColor', 'secondaryColor', 'contactEmail', 'contactPhone', 'contactWhatsapp', 'socialLinks'].forEach(f => {
+    ['siteName', 'primaryColor', 'secondaryColor', 'contactEmail', 'contactPhone', 'whatsapp', 'discord', 'telegram', 'heroTitle', 'heroSubtitle', 'footerText', 'currencies', 'defaultCurrency'].forEach(f => {
       if (body[f] !== undefined) updates[f] = body[f];
     });
     await db.collection('settings').updateOne({ id: 'main' }, { $set: updates }, { upsert: true });
