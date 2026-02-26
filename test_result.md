@@ -101,3 +101,183 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Digital card store (game top-up codes, Steam codes) with Next.js. Products with code inventory, auto-delivery on purchase, pending delivery when out of stock, admin panel, categories, cart, checkout, reviews, discounts, slider, FAQ, contact, user management, dark gaming theme, Arabic RTL, multi-currency (USD, SAR, KWD, AED), image upload to server."
+
+backend:
+  - task: "Auth API (register, login, session, logout, setup-admin, check-admin)"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Full auth system with session tokens, password hashing, admin setup"
+
+  - task: "Categories CRUD API"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "GET list, GET all (admin), POST create, PUT update, DELETE"
+
+  - task: "Products CRUD API with stock counts and review stats"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Full CRUD with category filter, search, featured flag, stock count aggregation"
+
+  - task: "Codes/Inventory Management API"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Admin only: GET codes by product, POST bulk add, DELETE individual code"
+
+  - task: "Orders API with auto code delivery"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Core business logic: atomic code reservation on order, pending delivery when out of stock, admin manual delivery"
+
+  - task: "Reviews API"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "GET by product, POST create (one per user per product)"
+
+  - task: "Discount Codes API"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Full CRUD for admin, validate endpoint for users"
+
+  - task: "Settings API"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "GET/PUT for site settings including social links (discord, whatsapp, telegram)"
+
+  - task: "Image Upload API"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "POST /api/upload - stores images in /public/uploads/, validates file type and size"
+
+  - task: "Exchange Rates API"
+    implemented: true
+    working: true
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Tested with curl, returns live rates from exchangerate-api.com with 1hr cache"
+
+  - task: "Users Management API"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Admin: list users, change role, ban/unban"
+
+  - task: "Sliders/FAQs API"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Full CRUD for both, admin only for mutations"
+
+  - task: "Security (rate limiting, headers, input validation)"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Rate limiter (120 req/min), security headers (X-Content-Type-Options, X-Frame-Options, etc.), input sanitization"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Auth API"
+    - "Orders API with auto code delivery"
+    - "Codes/Inventory Management API"
+    - "Products CRUD API"
+    - "Image Upload API"
+  stuck_tasks: []
+  test_all: true
+  test_priority: "high_first"
+
+agent_communication:
+    - agent: "main"
+      message: "Full backend implemented with all APIs. Priority test: 1) Auth flow (register, login, session), 2) Product and category CRUD, 3) Code inventory management, 4) Order creation with auto-delivery, 5) Image upload. The app is running at https://digital-key-store.preview.emergentagent.com. Backend base URL: /api. All endpoints require Authorization Bearer token for protected routes. Admin setup: POST /api/auth/setup-admin with {name, email, password}."
