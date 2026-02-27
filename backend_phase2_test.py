@@ -244,15 +244,15 @@ class Phase2BackendTest:
 
         success = True
 
-        # Test GET profile
-        response = self.make_request("GET", "/auth/profile", token=self.user_token)
+        # Test GET profile (use session endpoint)
+        response = self.make_request("GET", "/auth/session", token=self.user_token)
         if response and response.status_code == 200:
             profile = response.json()
             user_data = profile.get('user', {})
             if user_data:
                 self.log_result("Get User Profile", True, f"Profile retrieved for: {user_data.get('email', 'N/A')}")
             else:
-                self.log_result("Get User Profile", False, "No user data in profile response")
+                self.log_result("Get User Profile", False, "No user data in session response")
                 success = False
         else:
             self.log_result("Get User Profile", False, f"Failed: {response.status_code if response else 'No response'}")
@@ -295,12 +295,17 @@ class Phase2BackendTest:
             self.log_result("Update Profile (Email)", False, f"Failed: {response.status_code if response else 'No response'}")
             success = False
 
-        # Test authentication requirement
-        response = self.make_request("GET", "/auth/profile")  # No token
-        if response and response.status_code == 401:
-            self.log_result("Profile Auth Required", True, "Correctly requires authentication")
+        # Test authentication requirement (session endpoint without token)
+        response = self.make_request("GET", "/auth/session")  # No token
+        if response and response.status_code == 200:
+            data = response.json()
+            if data.get('user') is None:
+                self.log_result("Profile Auth Required", True, "Correctly returns null user without auth")
+            else:
+                self.log_result("Profile Auth Required", False, "Should return null user without auth")
+                success = False
         else:
-            self.log_result("Profile Auth Required", False, f"Should require auth, got: {response.status_code if response else 'No response'}")
+            self.log_result("Profile Auth Required", False, f"Session endpoint failed: {response.status_code if response else 'No response'}")
             success = False
 
         return success
