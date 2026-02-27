@@ -723,9 +723,10 @@ export default function App() {
           setOrder(order);
           
           // Check all reviews in parallel and wait for all
+          // Check reviews for THIS specific order (orderId) to allow multiple reviews for same product in different orders
           if (order.items && order.items.length > 0) {
             const reviewChecks = order.items.map(item =>
-              api(`/reviews?productId=${item.productId}&userId=${user.id}`,{},token)
+              api(`/reviews?productId=${item.productId}&userId=${user.id}&orderId=${order.id}`,{},token)
                 .then(reviews => ({productId: item.productId, hasReview: reviews.length > 0}))
                 .catch(() => ({productId: item.productId, hasReview: false}))
             );
@@ -749,12 +750,18 @@ export default function App() {
     
     const submitReview = async (productId) => {
       if (!user) { toast.error('يجب تسجيل الدخول'); return; }
+      if (!order?.id) { toast.error('خطأ في معرف الطلب'); return; }
       const state = reviewStates[productId];
       if (!state || !state.rating) { toast.error('يرجى اختيار التقييم'); return; }
       
       setReviewStates(prev => ({...prev, [productId]: {...state, submitting: true}}));
       try {
-        await api('/reviews',{method:'POST',body:JSON.stringify({productId, rating:state.rating, comment:state.comment||''})},token);
+        await api('/reviews',{method:'POST',body:JSON.stringify({
+          productId, 
+          orderId: order.id,
+          rating:state.rating, 
+          comment:state.comment||''
+        })},token);
         toast.success('تم إرسال التقييم - سيظهر بعد موافقة الإدارة');
         setExistingReviews(prev => ({...prev, [productId]: true}));
         setReviewStates(prev => ({...prev, [productId]: {rating: 5, comment: '', submitting: false}}));
