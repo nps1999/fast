@@ -899,18 +899,30 @@ async function handlePayPal(pathParts, method, request, db) {
       return res({ error: 'الطلب غير موجود' }, 404);
     }
     
-    // 🔒 IDEMPOTENCY: Return existing PayPal order if available
-    if (order.paypalOrderId && order.status === 'pending') {
+    console.log(`[PayPal Create] 📊 Order status: ${order.status}, PaymentID: ${order.paymentId ? 'exists' : 'none'}`);
+    
+    // 🔒 IDEMPOTENCY: Check if order is ALREADY PAID (not just processed)
+    // Order is considered PAID if:
+    // 1. status is 'completed' or 'delivered' OR
+    // 2. paymentId exists (payment was already captured)
+    const isPaid = (order.status === 'completed' || order.status === 'delivered') || order.paymentId;
+    
+    if (isPaid) {
+      console.log(`[PayPal Create] ⚠️ Order already PAID - Status: ${order.status}, PaymentID: ${order.paymentId?.slice(0,15)}`);
+      return res({ error: 'الطلب مدفوع بالفعل' }, 400);
+    }
+    
+    // ✅ Allow payment for 'pending' or 'pending_delivery' orders WITHOUT paymentId
+    // This means order was created but NOT paid yet
+    console.log(`[PayPal Create] ✅ Order awaiting payment - Status: ${order.status}`);
+    
+    // 🔒 IDEMPOTENCY: Return existing PayPal order if available and not expired
+    if (order.paypalOrderId) {
       console.log(`[PayPal Create] ♻️ Returning existing PayPalID: ${order.paypalOrderId?.slice(0,15)}`);
       return res({ 
         paypalOrderId: order.paypalOrderId, 
         approveUrl: `https://www.paypal.com/checkoutnow?token=${order.paypalOrderId}`
       });
-    }
-    
-    if (order.status !== 'pending') {
-      console.log(`[PayPal Create] ⚠️ Order already processed: ${order.status}`);
-      return res({ error: 'الطلب تم معالجته بالفعل' }, 400);
     }
     
     // IMPORTANT: Always send USD amount to PayPal
