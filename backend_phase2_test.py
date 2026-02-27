@@ -692,10 +692,14 @@ class Phase2BackendTest:
             "newPassword": "newpassword123"
         }
         response = self.make_request("POST", "/auth/reset-password", invalid_reset_data)
-        if response and response.status_code == 400:
-            self.log_result("Reset Password (Invalid Token)", True, "Correctly rejected invalid token")
+        if response:
+            if response.status_code == 400:
+                self.log_result("Reset Password (Invalid Token)", True, "Correctly rejected invalid token")
+            else:
+                self.log_result("Reset Password (Invalid Token)", False, f"Should reject invalid token, got: {response.status_code}")
+                success = False
         else:
-            self.log_result("Reset Password (Invalid Token)", False, f"Should reject invalid token, got: {response.status_code if response else 'No response'}")
+            self.log_result("Reset Password (Invalid Token)", False, "Request timeout or connection issue")
             success = False
 
         return success
