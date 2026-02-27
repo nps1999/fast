@@ -428,7 +428,6 @@ export default function App() {
   const CheckoutPage = () => {
     const [dc, setDC] = useState(''); const [di, setDI] = useState(null); const [proc, setProc] = useState(false);
     const [phoneCode, setPhoneCode] = useState('+966'); const [phoneNum, setPhoneNum] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('paypal');
     const validateD = async () => { try { const d = await api('/discounts/validate',{method:'POST',body:JSON.stringify({code:dc})}); setDI(d); toast.success('تم تطبيق الكود'); } catch(e) { toast.error(e.message); setDI(null); } };
     let da = 0; if (di) da = di.type === 'percentage' ? cartTotal*(di.value/100) : Math.min(di.value,cartTotal);
     const ft = cartTotal - da;
@@ -439,25 +438,21 @@ export default function App() {
         const items = cart.map(i => ({productId:i.productId,quantity:i.quantity}));
         const order = await api('/orders',{method:'POST',body:JSON.stringify({items,discountCode:di?dc:undefined,whatsAppNumber:phoneNum,countryCode:phoneCode})},token);
         
-        if (paymentMethod === 'paypal') {
-          try {
-            const paypalData = await api('/paypal/create-order',{method:'POST',body:JSON.stringify({orderId:order.id, currency})},token);
-            if (paypalData.approveUrl) {
-              window.location.href = paypalData.approveUrl;
-            } else {
-              toast.error('فشل إنشاء طلب PayPal');
-              setProc(false);
-            }
-          } catch(paypalErr) {
-            if (paypalErr.message.includes('PayPal غير مكون')) {
-              toast.error('PayPal غير مكون. يرجى اختيار طريقة الدفع اليدوي.');
-            } else {
-              toast.error('خطأ في PayPal: ' + paypalErr.message);
-            }
+        try {
+          const paypalData = await api('/paypal/create-order',{method:'POST',body:JSON.stringify({orderId:order.id, currency})},token);
+          if (paypalData.approveUrl) {
+            window.location.href = paypalData.approveUrl;
+          } else {
+            toast.error('فشل إنشاء طلب PayPal');
             setProc(false);
           }
-        } else {
-          setCart([]); localStorage.removeItem('cart'); toast.success('تم إنشاء الطلب بنجاح!'); navigate('order',order.id); setProc(false);
+        } catch(paypalErr) {
+          if (paypalErr.message.includes('PayPal غير مكون')) {
+            toast.error('PayPal غير مكون. يرجى التواصل مع الإدارة.');
+          } else {
+            toast.error('خطأ في PayPal: ' + paypalErr.message);
+          }
+          setProc(false);
         }
       } catch(e) { toast.error(e.message); setProc(false); }
     };
