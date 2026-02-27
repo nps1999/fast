@@ -260,8 +260,6 @@ export default function App() {
   const [settings, setSettings] = useState({ siteName: 'FAST STORE' });
   const [mobileMenu, setMobileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState(null);
-  const searchInputRef = useRef(null);
   const [currency, setCurrency] = useState(() => {
     // Also load saved currency
     if (typeof window !== 'undefined') {
@@ -285,27 +283,9 @@ export default function App() {
   const navigate = useCallback((p, id = null) => { setPage(p); setPageId(id); window.scrollTo({ top: 0, behavior: 'smooth' }); setMobileMenu(false); }, []);
   
   const handleSearch = useCallback((query) => {
-    if (!query || query.trim() === '') {
-      setSearchResults(null);
-      return;
-    }
-    
-    const q = query.toLowerCase().trim();
-    const results = products.filter(p => 
-      p.name.toLowerCase().includes(q) || 
-      p.description?.toLowerCase().includes(q)
-    );
-    
-    setSearchResults({
-      query: query,
-      results: results,
-      count: results.length
-    });
-    
-    if (results.length > 0) {
-      navigate('search');
-    }
-  }, [products, navigate]);
+    setSearchQuery(query);
+    navigate('search');
+  }, [navigate]);
 
   const addToCart = useCallback((product) => {
     setCart(prev => {
@@ -434,28 +414,7 @@ export default function App() {
           {categories.slice(0,5).map(c => <button key={c.id} onClick={() => navigate('category',c.id)} className={`text-sm font-medium hover:text-purple-400 ${page==='category'&&pageId===c.id?'text-purple-400':'text-gray-300'}`}>{c.name}</button>)}
         </nav>
         <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center bg-[#1a1a2e] rounded-lg border border-purple-500/20 px-3 py-1.5">
-            <Search className="w-4 h-4 text-gray-400 ml-2" />
-            <input 
-              ref={searchInputRef}
-              type="text" 
-              placeholder="ابحث عن منتج..." 
-              className="bg-transparent text-sm text-white outline-none w-32" 
-              defaultValue={searchQuery}
-              onKeyDown={(e) => { 
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const query = e.target.value.trim();
-                  if (query) {
-                    setSearchQuery(query);
-                    navigate('search');
-                  }
-                }
-              }}
-              autoComplete="off"
-              spellCheck="false"
-            />
-          </div>
+          <SearchBar onSearch={handleSearch} className="hidden sm:flex" />
           <Select value={currency} onValueChange={changeCurrency}>
             <SelectTrigger className="w-[130px] bg-[#1a1a2e] border-purple-500/20 h-9 text-xs">
               <SelectValue>
@@ -491,35 +450,56 @@ export default function App() {
 
   const HomePage = () => {
     const featured = products.filter(p => p.featured);
-    const filtered = searchQuery && page === 'search' ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.description?.toLowerCase().includes(searchQuery.toLowerCase())) : products;
+    const isSearchPage = page === 'search';
+    const filtered = isSearchPage && searchQuery ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.description?.toLowerCase().includes(searchQuery.toLowerCase())) : products;
+    const showSearchResults = isSearchPage && searchQuery;
+    
     return (<div className="animate-fade-in">
       <HeroSlider sliders={sliders} />
-      {categories.length > 0 && <section className="mb-10"><h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><FolderOpen className="w-6 h-6 text-purple-400" /> الأقسام</h2>
+      
+      {/* Search Results Section - appears right under slider */}
+      {showSearchResults && (
+        <section className="mb-10">
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+            <Search className="w-6 h-6 text-cyan-400" /> نتائج البحث: "{searchQuery}"
+          </h2>
+          {filtered.length === 0 ? (
+            <Card className="bg-[#12121f] border-purple-500/10 p-12 text-center">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-20 h-20 rounded-full bg-orange-500/10 flex items-center justify-center">
+                  <Package className="w-10 h-10 text-orange-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-orange-400">عذراً، غير متوفر</h3>
+                <p className="text-gray-400">لم نجد أي منتجات تطابق بحثك عن "{searchQuery}"</p>
+                <Button className="mt-4 bg-purple-600 hover:bg-purple-500" onClick={() => {setSearchQuery(''); navigate('home');}}>
+                  العودة للصفحة الرئيسية
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {filtered.map(p => <ProductCard key={p.id} product={p} onView={id => navigate('product',id)} onAddToCart={addToCart} formatPrice={formatPrice} />)}
+            </div>
+          )}
+        </section>
+      )}
+      
+      {!showSearchResults && categories.length > 0 && <section className="mb-10"><h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><FolderOpen className="w-6 h-6 text-purple-400" /> الأقسام</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">{categories.map(c => (
           <Card key={c.id} className="group bg-[#12121f] border-purple-500/10 hover:border-purple-500/40 transition-all duration-300 cursor-pointer overflow-hidden hover:shadow-[0_0_20px_rgba(139,92,246,0.15)]" onClick={() => navigate('category',c.id)}>
             <div className="h-28 overflow-hidden">{c.image ? <img src={c.image} alt={c.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /> : <div className="w-full h-full bg-gradient-to-br from-purple-900/30 to-cyan-900/30 flex items-center justify-center"><Gamepad2 className="w-10 h-10 text-purple-500/40" /></div>}</div>
             <CardContent className="p-3 text-center"><h3 className="font-bold text-sm group-hover:text-purple-400 transition-colors">{c.name}</h3><p className="text-xs text-gray-500 mt-1">{c.productCount||0} منتج</p></CardContent>
           </Card>))}</div></section>}
-      {featured.length > 0 && <section className="mb-10"><h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Crown className="w-6 h-6 text-yellow-400" /> المنتجات المميزة</h2>
+      {!showSearchResults && featured.length > 0 && <section className="mb-10"><h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Crown className="w-6 h-6 text-yellow-400" /> المنتجات المميزة</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">{featured.map(p => <ProductCard key={p.id} product={p} onView={id => navigate('product',id)} onAddToCart={addToCart} formatPrice={formatPrice} />)}</div></section>}
-      <section className="mb-10"><h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Package className="w-6 h-6 text-cyan-400" /> {page==='search'?`نتائج البحث: "${searchQuery}"`:'جميع المنتجات'}</h2>
-        {page==='search' && filtered.length === 0 ? (
-          <Card className="bg-[#12121f] border-purple-500/10 p-12 text-center">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-orange-500/10 flex items-center justify-center">
-                <Package className="w-10 h-10 text-orange-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-orange-400">عذراً، غير متوفر</h3>
-              <p className="text-gray-400">لم نجد أي منتجات تطابق بحثك عن "{searchQuery}"</p>
-              <Button className="mt-4 bg-purple-600 hover:bg-purple-500" onClick={() => {navigate('home'); if(searchInputRef.current) searchInputRef.current.value = ''; setSearchQuery('');}}>
-                العودة للصفحة الرئيسية
-              </Button>
-            </div>
-          </Card>
+      
+      {!showSearchResults && <section className="mb-10"><h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Package className="w-6 h-6 text-cyan-400" /> جميع المنتجات</h2>
+        {products.length === 0 ? (
+          <div className="text-center py-16 text-gray-500"><Package className="w-16 h-16 mx-auto mb-4 opacity-50" /><p>لا توجد منتجات بعد</p></div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">{(page==='search'?filtered:products).map(p => <ProductCard key={p.id} product={p} onView={id => navigate('product',id)} onAddToCart={addToCart} formatPrice={formatPrice} />)}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">{products.map(p => <ProductCard key={p.id} product={p} onView={id => navigate('product',id)} onAddToCart={addToCart} formatPrice={formatPrice} />)}</div>
         )}
-        {products.length === 0 && page !== 'search' && <div className="text-center py-16 text-gray-500"><Package className="w-16 h-16 mx-auto mb-4 opacity-50" /><p>لا توجد منتجات بعد</p></div>}</section>
+      </section>}
       <ReviewsCarousel reviews={approvedReviews} />
       {faqs.length > 0 && <section className="mb-10"><h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><HelpCircle className="w-6 h-6 text-purple-400" /> الأسئلة الشائعة</h2>
         <Accordion type="single" collapsible className="space-y-2">{faqs.map(f => <AccordionItem key={f.id} value={f.id} className="bg-[#12121f] border border-purple-500/10 rounded-lg px-4">
