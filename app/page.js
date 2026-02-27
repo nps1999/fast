@@ -567,8 +567,8 @@ export default function App() {
                 </svg>
               </div>
               <div className="flex-1">
-                <div className="font-semibold text-lg">الدفع عبر PayPal</div>
-                <div className="text-sm text-gray-400 mt-1">ادفع بأمان باستخدام PayPal - جميع المعاملات محمية ومشفرة</div>
+                <div className="font-semibold text-lg">PayPal أو بطاقة بنكية</div>
+                <div className="text-sm text-gray-400 mt-1">ادفع عبر PayPal أو بطاقة بنكية (Visa, Mastercard) - آمن ومشفر 🔒</div>
               </div>
               <Check className="w-6 h-6 text-green-400" />
             </div>
@@ -577,7 +577,7 @@ export default function App() {
       )}
       <Button size="lg" className={`w-full text-lg py-6 neon-glow ${isFreeOrder ? 'bg-green-600 hover:bg-green-500' : 'bg-purple-600 hover:bg-purple-500'}`} onClick={placeOrder} disabled={proc}>
         {proc ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : (isFreeOrder ? <CheckCircle className="w-5 h-5 ml-2" /> : <DollarSign className="w-5 h-5 ml-2" />)}
-        {proc ? (isFreeOrder ? 'جاري إتمام الطلب المجاني...' : 'جاري التوجيه إلى PayPal...') : (isFreeOrder ? '✨ إتمام الطلب المجاني' : 'الدفع عبر PayPal')}
+        {proc ? (isFreeOrder ? 'جاري إتمام الطلب المجاني...' : 'جاري التوجيه إلى PayPal...') : (isFreeOrder ? '✨ إتمام الطلب المجاني' : '💳 الدفع عبر PayPal / بطاقة بنكية')}
       </Button>
     </div>);
   };
