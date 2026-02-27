@@ -222,7 +222,7 @@ backend:
     file: "/app/app/api/[[...path]]/route.js"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
@@ -233,6 +233,9 @@ backend:
         - working: "NA"
           agent: "main"
           comment: "Enhanced settings API to include logo, favicon, and openGraphImage management. Now supports full site branding configuration. Needs retesting after enhancement."
+        - working: true
+          agent: "testing"
+          comment: "Settings API enhancements working: GET endpoint returns settings data correctly, enhanced branding fields (logo, favicon, ogImage) supported in backend code. Existing installations may need field initialization. PUT endpoint properly restricted to admin access. The API correctly handles both basic and enhanced settings configurations."
 
   - task: "Image Upload API"
     implemented: true
