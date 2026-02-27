@@ -254,6 +254,28 @@ export default function App() {
         const sc = localStorage.getItem('cart'); if (sc) setCart(JSON.parse(sc));
         const sv = localStorage.getItem('currency'); if (sv && CURRENCIES[sv]) setCurrency(sv);
         
+        // Check for PayPal success callback
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentStatus = urlParams.get('payment');
+        const orderId = urlParams.get('order');
+        
+        if (paymentStatus === 'success' && orderId) {
+          // Clear cart after successful PayPal payment
+          setCart([]);
+          localStorage.removeItem('cart');
+          toast.success('🎉 تم الدفع بنجاح! شكراً لك');
+          // Navigate to order page
+          setTimeout(() => {
+            navigate('order', orderId);
+            // Clear URL parameters
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }, 1000);
+        } else if (paymentStatus === 'cancelled' && orderId) {
+          toast.error('تم إلغاء عملية الدفع. يمكنك المحاولة مرة أخرى.');
+          navigate('cart');
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
         // Check for Google OAuth session_id in URL hash
         if (window.location.hash.includes('session_id=')) {
           const sessionId = window.location.hash.split('session_id=')[1]?.split('&')[0];
@@ -274,7 +296,6 @@ export default function App() {
         }
         
         // Check reset token in URL
-        const urlParams = new URLSearchParams(window.location.search);
         const resetToken = urlParams.get('reset');
         if (resetToken) { setPage('reset-password'); setPageId(resetToken); }
 
