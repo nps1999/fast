@@ -675,10 +675,10 @@ class Phase2BackendTest:
             print("⚠️  Admin authentication not available. Admin-only tests will be skipped.")
         
         success = True
-        success &= self.test_review_approval_system()
         success &= self.test_user_profile_management()  
         success &= self.test_settings_enhancements()
-        success &= self.test_whatsapp_data_collection()
+        success &= self.test_whatsapp_data_collection()  # This creates an order
+        success &= self.test_review_approval_system()    # This needs an order to exist first
         success &= self.test_sliders_crud()
         success &= self.test_faqs_crud()
         success &= self.test_password_reset_logic()
