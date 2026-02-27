@@ -642,6 +642,7 @@ async function handleReviews(path, method, request, db) {
     const url = new URL(request.url);
     const productId = url.searchParams.get('productId');
     const userId = url.searchParams.get('userId');
+    const orderId = url.searchParams.get('orderId');
     const all = url.searchParams.get('all');
     const approved = url.searchParams.get('approved');
 
@@ -651,6 +652,7 @@ async function handleReviews(path, method, request, db) {
     const filter = {};
     if (productId) filter.productId = productId;
     if (userId) filter.userId = userId;
+    if (orderId) filter.orderId = orderId;
     if (approved !== 'false') filter.approved = true;
     return res(await db.collection('reviews').find(filter).sort({ createdAt: -1 }).toArray());
   }
@@ -659,18 +661,35 @@ async function handleReviews(path, method, request, db) {
     if (!user) return res({ error: 'يجب تسجيل الدخول' }, 401);
     const body = await request.json();
     if (!body.productId || !body.rating) return res({ error: 'بيانات ناقصة' }, 400);
-    // Check if user purchased this product
+    if (!body.orderId) return res({ error: 'معرف الطلب مطلوب' }, 400);
+    
+    // Check if user purchased this product in this specific order
     const hasPurchased = await db.collection('orders').findOne({
-      userId: user.id, 'items.productId': body.productId,
+      id: body.orderId,
+      userId: user.id, 
+      'items.productId': body.productId,
       status: { $in: ['completed', 'delivered'] }
     });
     if (!hasPurchased) return res({ error: 'يجب شراء المنتج أولاً لتتمكن من التقييم' }, 400);
-    const existing = await db.collection('reviews').findOne({ productId: body.productId, userId: user.id });
-    if (existing) return res({ error: 'لقد قمت بتقييم هذا المنتج مسبقاً' }, 400);
+    
+    // Check if user already reviewed this product in THIS order (allow multiple reviews for different orders)
+    const existing = await db.collection('reviews').findOne({ 
+      productId: body.productId, 
+      userId: user.id,
+      orderId: body.orderId 
+    });
+    if (existing) return res({ error: 'لقد قمت بتقييم هذا المنتج في هذا الطلب مسبقاً' }, 400);
+    
     const review = {
-      id: uuidv4(), productId: body.productId, userId: user.id, userName: user.name,
+      id: uuidv4(), 
+      productId: body.productId, 
+      userId: user.id, 
+      userName: user.name,
+      orderId: body.orderId,
       rating: Math.min(5, Math.max(1, parseInt(body.rating))),
-      comment: body.comment || '', approved: false, createdAt: new Date()
+      comment: body.comment || '', 
+      approved: false, 
+      createdAt: new Date()
     };
     await db.collection('reviews').insertOne(review);
     return res(review, 201);
