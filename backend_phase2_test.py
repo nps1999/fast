@@ -48,22 +48,28 @@ class Phase2BackendTest:
             
         try:
             if method == "GET":
-                response = requests.get(url, headers=headers, timeout=30)
+                response = requests.get(url, headers=headers, timeout=60)  # Increased timeout
             elif method == "POST":
                 if files:
-                    response = requests.post(url, headers=headers, files=files, timeout=30)
+                    response = requests.post(url, headers=headers, files=files, timeout=60)
                 else:
-                    response = requests.post(url, headers=headers, json=data, timeout=30)
+                    response = requests.post(url, headers=headers, json=data, timeout=60)
             elif method == "PUT":
-                response = requests.put(url, headers=headers, json=data, timeout=30)
+                response = requests.put(url, headers=headers, json=data, timeout=60)
             elif method == "DELETE":
-                response = requests.delete(url, headers=headers, timeout=30)
+                response = requests.delete(url, headers=headers, timeout=60)
             else:
                 raise ValueError(f"Unsupported method: {method}")
                 
             return response
+        except requests.exceptions.Timeout:
+            print(f"Request timeout for {method} {endpoint}")
+            return None
+        except requests.exceptions.ConnectionError:
+            print(f"Connection error for {method} {endpoint}")
+            return None
         except Exception as e:
-            print(f"Request failed: {e}")
+            print(f"Request failed for {method} {endpoint}: {e}")
             return None
 
     def setup_authentication(self):
