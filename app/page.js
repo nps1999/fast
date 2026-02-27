@@ -270,8 +270,10 @@ export default function App() {
   useEffect(() => {
     async function init() {
       try {
-        const sc = localStorage.getItem('cart'); if (sc) setCart(JSON.parse(sc));
-        const sv = localStorage.getItem('currency'); if (sv && CURRENCIES[sv]) setCurrency(sv);
+        // Cart is now loaded via lazy initialization in useState
+        // const sc = localStorage.getItem('cart'); if (sc) setCart(JSON.parse(sc));
+        // Currency is also loaded via lazy initialization
+        // const sv = localStorage.getItem('currency'); if (sv && CURRENCIES[sv]) setCurrency(sv);
         
         // Check for PayPal success callback
         const urlParams = new URLSearchParams(window.location.search);
