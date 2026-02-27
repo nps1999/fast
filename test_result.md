@@ -305,15 +305,18 @@ backend:
 
   - task: "Password Reset API (email-based)"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/app/api/[[...path]]/route.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "NEW FEATURE: POST /api/auth/request-password-reset sends reset email with token, POST /api/auth/reset-password validates token and updates password. Uses nodemailer with Gmail SMTP. REQUIRES SMTP CREDENTIALS IN .ENV to test fully. Can test token generation/validation logic without SMTP."
+        - working: true
+          agent: "testing"
+          comment: "Password reset API logic working correctly: POST /api/auth/forgot-password generates reset tokens and returns success (email sending fails as expected with placeholder SMTP credentials), POST /api/auth/reset-password properly validates tokens and rejects invalid ones. The core authentication logic is sound - only email delivery requires SMTP configuration."
 
   - task: "Email Notifications (Order Confirmations)"
     implemented: true
