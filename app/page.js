@@ -381,7 +381,19 @@ export default function App() {
         <div className="flex items-center gap-2">
           <div className="hidden sm:flex items-center bg-[#1a1a2e] rounded-lg border border-purple-500/20 px-3 py-1.5">
             <Search className="w-4 h-4 text-gray-400 ml-2" />
-            <input type="text" placeholder="بحث..." className="bg-transparent text-sm text-white outline-none w-28" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && searchQuery.trim()) navigate('search'); }} />
+            <input 
+              type="text" 
+              placeholder="بحث..." 
+              className="bg-transparent text-sm text-white outline-none w-28" 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+              onKeyDown={(e) => { 
+                if (e.key === 'Enter' && searchQuery.trim()) {
+                  e.preventDefault();
+                  navigate('search');
+                }
+              }} 
+            />
           </div>
           <Select value={currency} onValueChange={changeCurrency}>
             <SelectTrigger className="w-[100px] bg-[#1a1a2e] border-purple-500/20 h-9 text-xs"><SelectValue /></SelectTrigger>
