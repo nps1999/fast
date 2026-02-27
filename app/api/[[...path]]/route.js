@@ -132,6 +132,108 @@ async function getDb() {
 }
 
 // ============ HELPERS ============
+
+// Send Discord Webhook Notification
+async function sendDiscordNotification(order) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  if (!webhookUrl || webhookUrl === 'your_discord_webhook_url_here') {
+    console.log('Discord webhook not configured');
+    return;
+  }
+
+  try {
+    const timestamp = new Date().toISOString();
+    const orderStatus = order.status === 'completed' ? '✅ مكتمل' : 
+                       order.status === 'pending_delivery' ? '⏳ بانتظار التسليم' : 
+                       '📦 تم التسليم';
+    
+    const paymentMethod = order.paymentMethod === 'free' ? '🎁 مجاني (100% خصم)' : 
+                         order.paymentMethod === 'paypal' ? '💳 PayPal' : 
+                         '💰 مباشر';
+    
+    const products = order.items.map(item => 
+      `**${item.productName}**\n└ الكمية: ${item.quantity}\n└ السعر: $${item.price.toFixed(2)}`
+    ).join('\n\n');
+
+    const embed = {
+      title: '🛒 طلب جديد في المتجر',
+      description: `تم إنشاء طلب جديد #${order.id.slice(0, 8)}`,
+      color: order.paymentMethod === 'free' ? 0x10b981 : // Green for free
+             order.status === 'completed' ? 0x8b5cf6 : // Purple for completed
+             0xf59e0b, // Orange for pending
+      fields: [
+        {
+          name: '🔢 رقم الطلب',
+          value: `\`${order.id.slice(0, 8)}\``,
+          inline: true
+        },
+        {
+          name: '💰 المبلغ المدفوع',
+          value: order.total === 0 ? '**مجاني** 🎉' : `**$${order.total.toFixed(2)}**`,
+          inline: true
+        },
+        {
+          name: '💳 طريقة الدفع',
+          value: paymentMethod,
+          inline: true
+        },
+        {
+          name: '📊 الحالة',
+          value: orderStatus,
+          inline: true
+        },
+        {
+          name: '📅 التاريخ',
+          value: new Date(order.createdAt).toLocaleString('ar-SA', { 
+            timeZone: 'Asia/Riyadh',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          inline: true
+        },
+        {
+          name: '📦 عدد المنتجات',
+          value: `${order.items.length} منتج`,
+          inline: true
+        },
+        {
+          name: '🛍️ المنتجات',
+          value: products,
+          inline: false
+        },
+        {
+          name: '👤 معلومات العميل',
+          value: `**الاسم:** ${order.userName}\n**البريد:** ${order.userEmail}\n**الجوال:** ${order.countryCode || ''} ${order.whatsAppNumber || order.phone || 'غير متوفر'}`,
+          inline: false
+        }
+      ],
+      footer: {
+        text: 'FAST STORE | نظام إدارة الطلبات',
+        icon_url: 'https://em-content.zobj.net/thumbs/120/apple/354/shopping-cart_1f6d2.png'
+      },
+      timestamp: timestamp
+    };
+
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'FAST STORE',
+        avatar_url: 'https://em-content.zobj.net/thumbs/120/apple/354/shopping-cart_1f6d2.png',
+        embeds: [embed]
+      })
+    });
+    
+    console.log('Discord notification sent for order:', order.id.slice(0, 8));
+  } catch (error) {
+    console.error('Discord webhook error:', error);
+  }
+}
+
+// ============ HELPERS ============
 function hashPw(p) { return crypto.createHash('sha256').update(p + (process.env.AUTH_SECRET || 'salt')).digest('hex'); }
 function res(data, status = 200) { return NextResponse.json(data, { status }); }
 
