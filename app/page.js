@@ -465,7 +465,7 @@ export default function App() {
 
   const HomePage = () => {
     const featured = products.filter(p => p.featured);
-    const filtered = searchQuery && page === 'search' ? products.filter(p => p.name.includes(searchQuery)) : products;
+    const filtered = searchQuery && page === 'search' ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.description?.toLowerCase().includes(searchQuery.toLowerCase())) : products;
     return (<div className="animate-fade-in">
       <HeroSlider sliders={sliders} />
       {categories.length > 0 && <section className="mb-10"><h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><FolderOpen className="w-6 h-6 text-purple-400" /> الأقسام</h2>
