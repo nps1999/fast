@@ -208,6 +208,26 @@ export default function App() {
       try {
         const sc = localStorage.getItem('cart'); if (sc) setCart(JSON.parse(sc));
         const sv = localStorage.getItem('currency'); if (sv && CURRENCIES[sv]) setCurrency(sv);
+        
+        // Check for Google OAuth session_id in URL hash
+        if (window.location.hash.includes('session_id=')) {
+          const sessionId = window.location.hash.split('session_id=')[1]?.split('&')[0];
+          if (sessionId) {
+            try {
+              const authData = await api('/google-auth/google-session', { method: 'POST', body: JSON.stringify({ session_id: sessionId }) });
+              setUser(authData.user);
+              setToken(authData.token);
+              localStorage.setItem('token', authData.token);
+              toast.success('تم تسجيل الدخول عبر Google');
+              window.location.hash = ''; // Clear hash
+              setPage('home');
+            } catch (e) {
+              toast.error('فشل تسجيل الدخول عبر Google');
+              console.error('Google OAuth error:', e);
+            }
+          }
+        }
+        
         // Check reset token in URL
         const urlParams = new URLSearchParams(window.location.search);
         const resetToken = urlParams.get('reset');
