@@ -1128,34 +1128,84 @@ async function handlePayPal(pathParts, method, request, db) {
         return res({ error: 'فشل تأكيد الدفع', details: errorDetails?.description }, 500);
       }
       
-      // Success case
+      // Success case - Payment captured successfully!
       if (captureData.status === 'COMPLETED') {
         console.log(`[PayPal Capture] ✅ Payment captured successfully`);
         
-        // Update order status to completed
+        // 🎯 NOW deliver the codes (ONLY after successful payment!)
+        console.log(`[PayPal Capture] 📦 Delivering codes...`);
+        
+        const updatedItems = [];
+        let hasPending = false;
+        
+        for (const item of order.items) {
+          const deliveredCodes = [];
+          const qty = item.quantity || 1;
+          
+          // Deliver codes NOW (payment is confirmed)
+          for (let i = 0; i < qty; i++) {
+            const codeDoc = await db.collection('codes').findOneAndUpdate(
+              { productId: item.productId, status: 'available' },
+              { $set: { status: 'sold', orderId, soldAt: new Date() } },
+              { returnDocument: 'after' }
+            );
+            if (codeDoc) {
+              deliveredCodes.push(codeDoc.code);
+            }
+          }
+          
+          const pendingCount = qty - deliveredCodes.length;
+          if (pendingCount > 0) hasPending = true;
+          
+          updatedItems.push({
+            ...item,
+            deliveredCodes,
+            pendingCount
+          });
+        }
+        
+        // Determine final status
+        const finalStatus = hasPending ? 'pending_delivery' : 'completed';
+        
+        console.log(`[PayPal Capture] 📊 Delivered codes, Final status: ${finalStatus}`);
+        
+        // Update order with delivered codes and payment info
         await db.collection('orders').updateOne(
           { id: orderId },
           { 
             $set: { 
-              status: 'completed', 
+              items: updatedItems,
+              status: finalStatus,
               paymentId: paypalOrderId,
+              paymentMethod: 'paypal',
               paymentCompletedAt: new Date(),
               updatedAt: new Date() 
             } 
           }
         );
         
+        // Get updated order for email
+        const updatedOrder = await db.collection('orders').findOne({ id: orderId });
+        
         console.log(`[PayPal Capture] 📧 Sending confirmation email...`);
-        // Send confirmation email
+        // Send confirmation email with codes
         try {
           const settings = await db.collection('settings').findOne({});
-          await sendMail(user.email, `تأكيد الطلب #${orderId.slice(0, 8)} - FAST STORE`, orderEmailHtml(order, settings));
+          await sendMail(user.email, `تأكيد الطلب #${orderId.slice(0, 8)} - FAST STORE`, orderEmailHtml(updatedOrder, settings));
           console.log(`[PayPal Capture] ✅ Email sent successfully`);
         } catch (emailError) {
           console.error(`[PayPal Capture] ⚠️ Email failed:`, emailError.message);
         }
         
-        return res({ success: true, status: 'completed', orderId });
+        // Send Discord notification
+        try {
+          await sendDiscordNotification(updatedOrder);
+          console.log(`[PayPal Capture] ✅ Discord notification sent`);
+        } catch (discordError) {
+          console.error(`[PayPal Capture] ⚠️ Discord failed:`, discordError.message);
+        }
+        
+        return res({ success: true, status: finalStatus, orderId });
       } else {
         console.log(`[PayPal Capture] ⚠️ Unexpected status: ${captureData.status}`);
         return res({ error: 'الدفع غير مكتمل', status: captureData.status }, 400);
