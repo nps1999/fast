@@ -1026,9 +1026,16 @@ async function handlePayPal(pathParts, method, request, db) {
         return res({ error: 'الطلب غير موجود' }, 404);
       }
       
-      // 🔒 IDEMPOTENCY: If order is already completed/paid, return success immediately
-      if (order.status === 'completed' && order.paymentId) {
-        console.log(`[PayPal Capture] ✅ Order already completed - PaymentID: ${order.paymentId?.slice(0,15)}`);
+      console.log(`[PayPal Capture] 📊 Order status: ${order.status}, PaymentID: ${order.paymentId ? 'exists' : 'none'}`);
+      
+      // 🔒 IDEMPOTENCY: Check if order is ALREADY PAID
+      // Order is considered PAID if:
+      // 1. paymentId exists (payment was already captured) OR
+      // 2. status is 'completed' or 'delivered'
+      const isPaid = order.paymentId || (order.status === 'completed' || order.status === 'delivered');
+      
+      if (isPaid) {
+        console.log(`[PayPal Capture] ✅ Order already PAID - PaymentID: ${order.paymentId?.slice(0,15)}`);
         return res({ 
           success: true, 
           status: 'completed', 
@@ -1038,7 +1045,7 @@ async function handlePayPal(pathParts, method, request, db) {
         });
       }
       
-      console.log(`[PayPal Capture] 📝 Order status: ${order.status}, attempting capture...`);
+      console.log(`[PayPal Capture] 💳 Attempting capture - Order is NOT paid yet...`);
       
       const paypalClientId = process.env.PAYPAL_CLIENT_ID;
       const paypalSecret = process.env.PAYPAL_SECRET;
