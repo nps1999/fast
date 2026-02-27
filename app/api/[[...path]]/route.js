@@ -976,7 +976,7 @@ async function handlePayPal(pathParts, method, request, db) {
     }
   }
 
-  // Capture PayPal Payment
+  // Capture PayPal Payment (IDEMPOTENT - Safe to call multiple times)
   if (action === 'capture-order' && method === 'POST') {
     const user = await getUser(request, db);
     if (!user) return res({ error: 'غير مصرح' }, 401);
@@ -986,7 +986,30 @@ async function handlePayPal(pathParts, method, request, db) {
     
     if (!orderId || !paypalOrderId) return res({ error: 'معرفات الطلب مطلوبة' }, 400);
     
+    console.log(`[PayPal Capture] 🔍 Request received - OrderID: ${orderId?.slice(0,8)}, PayPalOrderID: ${paypalOrderId?.slice(0,15)}`);
+    
     try {
+      // 🔒 IDEMPOTENCY CHECK: Verify order exists and belongs to user
+      const order = await db.collection('orders').findOne({ id: orderId, userId: user.id });
+      if (!order) {
+        console.log(`[PayPal Capture] ❌ Order not found or doesn't belong to user`);
+        return res({ error: 'الطلب غير موجود' }, 404);
+      }
+      
+      // 🔒 IDEMPOTENCY: If order is already completed/paid, return success immediately
+      if (order.status === 'completed' && order.paymentId) {
+        console.log(`[PayPal Capture] ✅ Order already completed - PaymentID: ${order.paymentId?.slice(0,15)}`);
+        return res({ 
+          success: true, 
+          status: 'completed', 
+          orderId,
+          alreadyProcessed: true,
+          message: 'الطلب تم معالجته بنجاح سابقاً'
+        });
+      }
+      
+      console.log(`[PayPal Capture] 📝 Order status: ${order.status}, attempting capture...`);
+      
       const paypalClientId = process.env.PAYPAL_CLIENT_ID;
       const paypalSecret = process.env.PAYPAL_SECRET;
       
@@ -1004,6 +1027,7 @@ async function handlePayPal(pathParts, method, request, db) {
       const { access_token } = await tokenResponse.json();
       
       // Capture the payment
+      console.log(`[PayPal Capture] 💳 Calling PayPal API for capture...`);
       const captureResponse = await fetch(`https://api-m.paypal.com/v2/checkout/orders/${paypalOrderId}/capture`, {
         method: 'POST',
         headers: {
@@ -1012,16 +1036,52 @@ async function handlePayPal(pathParts, method, request, db) {
         },
       });
       
+      const captureData = await captureResponse.json();
+      console.log(`[PayPal Capture] 📥 PayPal response status: ${captureResponse.status}, data:`, JSON.stringify(captureData).slice(0, 200));
+      
+      // 🔒 Handle "already captured" case (PayPal returns 422)
       if (!captureResponse.ok) {
-        console.error('PayPal capture error:', await captureResponse.text());
-        return res({ error: 'فشل تأكيد الدفع' }, 500);
+        const errorDetails = captureData?.details?.[0];
+        const errorIssue = errorDetails?.issue || '';
+        
+        // If PayPal says it's already captured, treat as success
+        if (captureResponse.status === 422 && 
+            (errorIssue.includes('ALREADY') || errorIssue.includes('COMPLETED') || errorDetails?.description?.includes('already'))) {
+          console.log(`[PayPal Capture] ⚠️ PayPal says already captured - Treating as success`);
+          
+          // Update order to completed if not already
+          await db.collection('orders').updateOne(
+            { id: orderId },
+            { 
+              $set: { 
+                status: 'completed', 
+                paymentId: paypalOrderId,
+                paymentCompletedAt: new Date(),
+                updatedAt: new Date() 
+              } 
+            }
+          );
+          
+          console.log(`[PayPal Capture] ✅ Order marked as completed despite duplicate capture attempt`);
+          return res({ 
+            success: true, 
+            status: 'completed', 
+            orderId,
+            alreadyProcessed: true,
+            message: 'تم تأكيد الدفع بنجاح'
+          });
+        }
+        
+        // Other errors
+        console.error(`[PayPal Capture] ❌ PayPal error:`, captureData);
+        return res({ error: 'فشل تأكيد الدفع', details: errorDetails?.description }, 500);
       }
       
-      const captureData = await captureResponse.json();
-      
+      // Success case
       if (captureData.status === 'COMPLETED') {
+        console.log(`[PayPal Capture] ✅ Payment captured successfully`);
+        
         // Update order status to completed
-        const order = await db.collection('orders').findOne({ id: orderId });
         await db.collection('orders').updateOne(
           { id: orderId },
           { 
@@ -1034,18 +1094,25 @@ async function handlePayPal(pathParts, method, request, db) {
           }
         );
         
+        console.log(`[PayPal Capture] 📧 Sending confirmation email...`);
         // Send confirmation email
-        const settings = await db.collection('settings').findOne({});
-        await sendMail(user.email, `تأكيد الطلب #${orderId.slice(0, 8)} - FAST STORE`, orderEmailHtml(order, settings));
+        try {
+          const settings = await db.collection('settings').findOne({});
+          await sendMail(user.email, `تأكيد الطلب #${orderId.slice(0, 8)} - FAST STORE`, orderEmailHtml(order, settings));
+          console.log(`[PayPal Capture] ✅ Email sent successfully`);
+        } catch (emailError) {
+          console.error(`[PayPal Capture] ⚠️ Email failed:`, emailError.message);
+        }
         
         return res({ success: true, status: 'completed', orderId });
       } else {
+        console.log(`[PayPal Capture] ⚠️ Unexpected status: ${captureData.status}`);
         return res({ error: 'الدفع غير مكتمل', status: captureData.status }, 400);
       }
       
     } catch (e) {
-      console.error('PayPal capture error:', e);
-      return res({ error: 'خطأ في تأكيد الدفع' }, 500);
+      console.error('[PayPal Capture] ❌ Exception:', e);
+      return res({ error: 'خطأ في تأكيد الدفع', details: e.message }, 500);
     }
   }
 
