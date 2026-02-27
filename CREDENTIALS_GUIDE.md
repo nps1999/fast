@@ -73,6 +73,31 @@ SMTP_FROM=your_email@gmail.com
 
 ---
 
+## 4. تكامل Discord Webhook (إشعارات الطلبات)
+
+### الحصول على Discord Webhook URL:
+راجع الدليل الكامل في: `/app/DISCORD_WEBHOOK_GUIDE.md`
+
+**خطوات سريعة:**
+1. افتح Discord → اختر القناة
+2. تعديل القناة → Integrations → Create Webhook
+3. Copy Webhook URL
+
+### البيانات المطلوبة:
+```env
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_HERE
+```
+
+### الميزات:
+- ✅ إشعار فوري عند كل طلب جديد
+- ✅ Embed احترافي مع جميع تفاصيل الطلب
+- ✅ معلومات المنتج والسعر والكمية
+- ✅ معلومات العميل (الاسم، البريد، الجوال)
+- ✅ طريقة الدفع والحالة والتاريخ
+- ✅ ألوان مختلفة حسب نوع الطلب
+
+---
+
 ## الحالة الحالية
 
 ### ✅ جاهز ويعمل بدون بيانات:
