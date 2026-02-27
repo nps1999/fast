@@ -890,10 +890,28 @@ async function handlePayPal(pathParts, method, request, db) {
     
     if (!orderId) return res({ error: 'معرف الطلب مطلوب' }, 400);
     
+    console.log(`[PayPal Create] 🆕 Request - OrderID: ${orderId?.slice(0,8)}`);
+    
     // Get order from database
     const order = await db.collection('orders').findOne({ id: orderId, userId: user.id });
-    if (!order) return res({ error: 'الطلب غير موجود' }, 404);
-    if (order.status !== 'pending') return res({ error: 'الطلب تم معالجته بالفعل' }, 400);
+    if (!order) {
+      console.log(`[PayPal Create] ❌ Order not found`);
+      return res({ error: 'الطلب غير موجود' }, 404);
+    }
+    
+    // 🔒 IDEMPOTENCY: Return existing PayPal order if available
+    if (order.paypalOrderId && order.status === 'pending') {
+      console.log(`[PayPal Create] ♻️ Returning existing PayPalID: ${order.paypalOrderId?.slice(0,15)}`);
+      return res({ 
+        paypalOrderId: order.paypalOrderId, 
+        approveUrl: `https://www.paypal.com/checkoutnow?token=${order.paypalOrderId}`
+      });
+    }
+    
+    if (order.status !== 'pending') {
+      console.log(`[PayPal Create] ⚠️ Order already processed: ${order.status}`);
+      return res({ error: 'الطلب تم معالجته بالفعل' }, 400);
+    }
     
     // IMPORTANT: Always send USD amount to PayPal
     // The order.total is already in USD (original product price)
