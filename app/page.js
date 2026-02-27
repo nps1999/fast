@@ -230,6 +230,8 @@ export default function App() {
   const [settings, setSettings] = useState({ siteName: 'FAST STORE' });
   const [mobileMenu, setMobileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  const searchInputRef = useRef(null);
   const [currency, setCurrency] = useState(() => {
     // Also load saved currency
     if (typeof window !== 'undefined') {
