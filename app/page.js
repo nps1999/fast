@@ -1243,6 +1243,7 @@ export default function App() {
       <Header /><main className="container mx-auto px-4 py-6">
         {page==='home'&&<HomePage />}{page==='search'&&<HomePage />}{page==='category'&&<CategoryPage />}{page==='product'&&<ProductDetail />}
         {page==='cart'&&<CartPage />}{page==='checkout'&&<CheckoutPage />}{page==='orders'&&<OrdersPage />}{page==='order'&&<OrderDetail />}
+        {page==='payment-failed'&&<PaymentFailedPage />}{page==='payment-cancelled'&&<PaymentCancelledPage />}
         {(page==='login'||page==='register')&&<LoginPage />}{page==='profile'&&user&&<ProfilePage />}{page==='reset-password'&&<ResetPasswordPage />}
       </main><Footer /></>}
   </div>);
