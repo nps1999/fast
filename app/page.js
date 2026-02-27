@@ -547,7 +547,7 @@ export default function App() {
           <div className="flex items-center gap-3 mb-4"><StarRating rating={Math.round(product.avgRating || 0)} size="md" /><span className="text-gray-400">({product.reviewCount || 0} تقييم)</span></div>
           <div className="flex items-center gap-4 mb-6"><span className="text-4xl font-black text-purple-400">{formatPrice(fp)}</span>{product.discount > 0 && <span className="text-xl text-gray-500 line-through">{formatPrice(product.price)}</span>}</div>
           {product.description && <p className="text-gray-400 mb-6 leading-relaxed">{product.description}</p>}
-          <Badge className={product.stock > 0 ? 'bg-green-500/20 text-green-400 border-green-500/30 mb-6' : 'bg-orange-500/20 text-orange-400 border-orange-500/30 mb-6'}>{product.stock > 0 ? `${product.stock} متوفر` : 'غير متوفر - سيتم التسليم يدوياً'}</Badge>
+          {/* Stock badge removed - products can be ordered even when out of stock */}
           <Button size="lg" className="w-full bg-purple-600 hover:bg-purple-500 text-lg py-6 neon-glow" onClick={() => addToCart(product)}><ShoppingCart className="w-5 h-5 ml-2" /> أضف إلى السلة</Button>
         </div>
       </div>
