@@ -407,20 +407,23 @@ export default function App() {
           <div className="hidden sm:flex items-center bg-[#1a1a2e] rounded-lg border border-purple-500/20 px-3 py-1.5">
             <Search className="w-4 h-4 text-gray-400 ml-2" />
             <input 
+              ref={searchInputRef}
               type="text" 
-              placeholder="بحث..." 
-              className="bg-transparent text-sm text-white outline-none w-28" 
-              value={searchQuery} 
-              onChange={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setSearchQuery(e.target.value);
-              }} 
+              placeholder="ابحث عن منتج..." 
+              className="bg-transparent text-sm text-white outline-none w-32" 
               onKeyDown={(e) => { 
-                if (e.key === 'Enter' && searchQuery.trim()) {
+                if (e.key === 'Enter') {
                   e.preventDefault();
-                  e.stopPropagation();
-                  navigate('search');
+                  const query = e.target.value;
+                  setSearchQuery(query);
+                  handleSearch(query);
+                }
+              }}
+              onInput={(e) => {
+                // Live search as user types
+                const query = e.target.value;
+                if (query.length === 0) {
+                  setSearchResults(null);
                 }
               }}
               autoComplete="off"
