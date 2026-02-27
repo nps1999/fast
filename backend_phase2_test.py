@@ -349,6 +349,8 @@ class Phase2BackendTest:
             else:
                 self.log_result("Update Settings (Admin)", False, f"Failed: {response.status_code if response else 'No response'}")
                 success = False
+        else:
+            self.log_result("Update Settings (Admin)", False, "No admin token available - skipping admin settings update test")
 
         # Test admin-only enforcement
         if self.user_token:
