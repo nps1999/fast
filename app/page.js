@@ -326,9 +326,11 @@ export default function App() {
             // Clear URL parameters
             window.history.replaceState({}, document.title, window.location.pathname);
           }, 1000);
-        } else if (paymentStatus === 'cancelled' && orderId) {
-          toast.error('تم إلغاء عملية الدفع. يمكنك المحاولة مرة أخرى.');
-          navigate('cart');
+        } else if (paymentStatus === 'failed') {
+          navigate('payment-failed');
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (paymentStatus === 'cancelled') {
+          navigate('payment-cancelled');
           window.history.replaceState({}, document.title, window.location.pathname);
         }
         
