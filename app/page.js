@@ -210,7 +210,19 @@ function ProductCard({ product, onView, onAddToCart, formatPrice }) {
 export default function App() {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState('');
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    // Lazy initialization - load cart from localStorage immediately
+    if (typeof window !== 'undefined') {
+      try {
+        const savedCart = localStorage.getItem('cart');
+        return savedCart ? JSON.parse(savedCart) : [];
+      } catch (error) {
+        console.error('Error loading cart:', error);
+        return [];
+      }
+    }
+    return [];
+  });
   const [page, setPage] = useState('home');
   const [pageId, setPageId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -218,7 +230,14 @@ export default function App() {
   const [settings, setSettings] = useState({ siteName: 'FAST STORE' });
   const [mobileMenu, setMobileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState(() => {
+    // Also load saved currency
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('currency');
+      return saved && CURRENCIES[saved] ? saved : 'USD';
+    }
+    return 'USD';
+  });
   const [exchangeRates, setExchangeRates] = useState({ USD:1 });
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
