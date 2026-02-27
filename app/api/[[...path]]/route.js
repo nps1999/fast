@@ -461,12 +461,16 @@ async function handleOrders(path, method, request, db) {
     }
 
     const total = Math.round((subtotal - discountAmount) * 100) / 100;
+    const isFreeOrder = total <= 0;
     const order = {
       id: orderId, userId: user.id, userEmail: user.email, userName: user.name,
-      phone: body.phone || '', countryCode: body.countryCode || '',
-      items: orderItems, subtotal, discountCode: appliedDiscount, discountAmount, total,
-      status: hasPending ? 'pending_delivery' : 'completed',
-      paymentMethod: 'direct', createdAt: new Date()
+      phone: body.phone || body.whatsAppNumber || '', 
+      whatsAppNumber: body.whatsAppNumber || body.phone || '',
+      countryCode: body.countryCode || '',
+      items: orderItems, subtotal, discountCode: appliedDiscount, discountAmount, total: Math.max(0, total),
+      status: isFreeOrder ? 'completed' : (hasPending ? 'pending_delivery' : 'completed'),
+      paymentMethod: isFreeOrder ? 'free' : 'direct', 
+      createdAt: new Date()
     };
     await db.collection('orders').insertOne(order);
 
