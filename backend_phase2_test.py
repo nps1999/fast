@@ -140,7 +140,7 @@ class Phase2BackendTest:
             else:
                 self.log_result("Product Setup", False, "No products available for testing")
         
-        return True
+        return self.user_token is not None  # Only require user token to continue
 
     def test_review_approval_system(self):
         """Test the review approval system"""
