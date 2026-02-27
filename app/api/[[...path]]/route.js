@@ -641,6 +641,7 @@ async function handleReviews(path, method, request, db) {
   if (method === 'GET') {
     const url = new URL(request.url);
     const productId = url.searchParams.get('productId');
+    const userId = url.searchParams.get('userId');
     const all = url.searchParams.get('all');
     const approved = url.searchParams.get('approved');
 
@@ -649,6 +650,7 @@ async function handleReviews(path, method, request, db) {
     }
     const filter = {};
     if (productId) filter.productId = productId;
+    if (userId) filter.userId = userId;
     if (approved !== 'false') filter.approved = true;
     return res(await db.collection('reviews').find(filter).sort({ createdAt: -1 }).toArray());
   }
