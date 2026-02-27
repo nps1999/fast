@@ -435,10 +435,6 @@ class Phase2BackendTest:
         """Test Sliders CRUD operations"""
         print("\n=== Testing Sliders CRUD ===")
         
-        if not self.admin_token:
-            self.log_result("Sliders CRUD Setup", False, "No admin token available")
-            return False
-
         success = True
 
         # Test GET sliders (public)
@@ -449,6 +445,10 @@ class Phase2BackendTest:
         else:
             self.log_result("Get Sliders (Public)", False, f"Failed: {response.status_code if response else 'No response'}")
             success = False
+
+        if not self.admin_token:
+            self.log_result("Sliders CRUD (Admin)", False, "No admin token available - skipping admin-only slider tests")
+            return success
 
         # Test POST slider (admin only)
         slider_data = {
