@@ -477,8 +477,23 @@ export default function App() {
       {featured.length > 0 && <section className="mb-10"><h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Crown className="w-6 h-6 text-yellow-400" /> المنتجات المميزة</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">{featured.map(p => <ProductCard key={p.id} product={p} onView={id => navigate('product',id)} onAddToCart={addToCart} formatPrice={formatPrice} />)}</div></section>}
       <section className="mb-10"><h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Package className="w-6 h-6 text-cyan-400" /> {page==='search'?`نتائج البحث: "${searchQuery}"`:'جميع المنتجات'}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">{(page==='search'?filtered:products).map(p => <ProductCard key={p.id} product={p} onView={id => navigate('product',id)} onAddToCart={addToCart} formatPrice={formatPrice} />)}</div>
-        {products.length === 0 && <div className="text-center py-16 text-gray-500"><Package className="w-16 h-16 mx-auto mb-4 opacity-50" /><p>لا توجد منتجات بعد</p></div>}</section>
+        {page==='search' && filtered.length === 0 ? (
+          <Card className="bg-[#12121f] border-purple-500/10 p-12 text-center">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-20 h-20 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <Package className="w-10 h-10 text-orange-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-orange-400">عذراً، غير متوفر</h3>
+              <p className="text-gray-400">لم نجد أي منتجات تطابق بحثك عن "{searchQuery}"</p>
+              <Button className="mt-4 bg-purple-600 hover:bg-purple-500" onClick={() => {navigate('home'); if(searchInputRef.current) searchInputRef.current.value = ''; setSearchQuery('');}}>
+                العودة للصفحة الرئيسية
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">{(page==='search'?filtered:products).map(p => <ProductCard key={p.id} product={p} onView={id => navigate('product',id)} onAddToCart={addToCart} formatPrice={formatPrice} />)}</div>
+        )}
+        {products.length === 0 && page !== 'search' && <div className="text-center py-16 text-gray-500"><Package className="w-16 h-16 mx-auto mb-4 opacity-50" /><p>لا توجد منتجات بعد</p></div>}</section>
       <ReviewsCarousel reviews={approvedReviews} />
       {faqs.length > 0 && <section className="mb-10"><h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><HelpCircle className="w-6 h-6 text-purple-400" /> الأسئلة الشائعة</h2>
         <Accordion type="single" collapsible className="space-y-2">{faqs.map(f => <AccordionItem key={f.id} value={f.id} className="bg-[#12121f] border border-purple-500/10 rounded-lg px-4">
