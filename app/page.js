@@ -386,13 +386,20 @@ export default function App() {
               placeholder="بحث..." 
               className="bg-transparent text-sm text-white outline-none w-28" 
               value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
+              onChange={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setSearchQuery(e.target.value);
+              }} 
               onKeyDown={(e) => { 
                 if (e.key === 'Enter' && searchQuery.trim()) {
                   e.preventDefault();
+                  e.stopPropagation();
                   navigate('search');
                 }
-              }} 
+              }}
+              autoComplete="off"
+              spellCheck="false"
             />
           </div>
           <Select value={currency} onValueChange={changeCurrency}>
