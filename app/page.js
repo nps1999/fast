@@ -591,15 +591,20 @@ export default function App() {
         const order = await api('/orders',{method:'POST',body:JSON.stringify({items,discountCode:di?dc:undefined,whatsAppNumber:phoneNum,countryCode:phoneCode,isFree:isFreeOrder})},token);
         
         if (isFreeOrder) {
-          // Free order - complete immediately without PayPal
-          try {
-            await api(`/orders/${order.id}`,{method:'PUT',body:JSON.stringify({status:'completed'})},token);
+          // Free order - check if order needs manual delivery (pending_delivery status)
+          // Only mark as completed if all codes were delivered automatically
+          if (order.status === 'completed') {
+            // Order already completed by backend (all codes delivered)
             setCart([]); 
             localStorage.removeItem('cart'); 
             toast.success('🎉 تم إتمام الطلب المجاني بنجاح!'); 
             navigate('order',order.id);
-          } catch(e) {
-            toast.error('خطأ في إتمام الطلب: ' + e.message);
+          } else if (order.status === 'pending_delivery') {
+            // Order has items waiting for manual delivery
+            setCart([]); 
+            localStorage.removeItem('cart'); 
+            toast.success('🎉 تم استلام طلبك المجاني! سيتم تسليم الأكواد قريباً'); 
+            navigate('order',order.id);
           }
           setProc(false);
         } else {
