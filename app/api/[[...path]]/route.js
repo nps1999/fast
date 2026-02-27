@@ -1039,6 +1039,8 @@ async function handler(request, context) {
     let response;
     switch (resource) {
       case 'auth': response = await handleAuth(routePath.slice(1), request.method, request, db); break;
+      case 'google-auth': response = await handleGoogleAuth(routePath.slice(1), request.method, request, db); break;
+      case 'paypal': response = await handlePayPal(routePath.slice(1), request.method, request, db); break;
       case 'categories': response = await handleCategories(routePath.slice(1), request.method, request, db); break;
       case 'products': response = await handleProducts(routePath.slice(1), request.method, request, db); break;
       case 'codes': response = await handleCodes(routePath.slice(1), request.method, request, db); break;
