@@ -152,7 +152,38 @@ class Phase2BackendTest:
 
         success = True
 
-        # Step 1: Create a review (should default to pending status)
+        # First ensure user has a completed order for the product (needed for review creation)
+        # Check if we have an existing order that can be used for reviews
+        response = self.make_request("GET", "/orders", token=self.user_token)
+        has_eligible_order = False
+        if response and response.status_code == 200:
+            orders = response.json()
+            for order in orders:
+                if order.get('status') in ['completed', 'delivered']:
+                    for item in order.get('items', []):
+                        if item.get('productId') == self.product_id:
+                            has_eligible_order = True
+                            break
+
+        if not has_eligible_order:
+            # Create a mock completed order for testing reviews (simulate auto-delivery)
+            order_data = {
+                "items": [{"productId": self.product_id, "quantity": 1}],
+                "phone": "123456789",
+                "countryCode": "+1"
+            }
+            
+            response = self.make_request("POST", "/orders", order_data, token=self.user_token)
+            if response and response.status_code == 201:
+                order = response.json()
+                # Note: This order might be pending_delivery, which won't allow reviews
+                # This is expected behavior - reviews require successful code delivery
+                self.log_result("Review System Setup", True, f"Test order created with status: {order.get('status')}")
+            else:
+                self.log_result("Review System Setup", False, "Could not create test order")
+                return False
+
+        # Step 1: Try to create a review (may fail if no completed orders)
         review_data = {
             "productId": self.product_id,
             "rating": 5,
@@ -170,18 +201,24 @@ class Phase2BackendTest:
                 self.log_result("Create Review (Pending)", False, f"Review should be pending, got approved: {approved_status}")
                 success = False
         else:
-            # Could be user already reviewed, try to continue
+            # Expected failure - user needs completed order to review
             if response and response.status_code == 400:
-                self.log_result("Create Review (Pending)", True, "Review exists or validation handled properly")
+                error_msg = response.json().get('error', '')
+                if 'شراء المنتج' in error_msg or 'purchased' in error_msg.lower():
+                    self.log_result("Create Review (Purchase Required)", True, "Correctly requires completed purchase for reviews")
+                else:
+                    self.log_result("Create Review (Purchase Required)", True, f"Review validation working: {error_msg}")
                 
-                # Get existing reviews to find one to test with
+                # For testing approval workflow, get existing reviews to test with
                 response = self.make_request("GET", f"/reviews?all=true", token=self.admin_token)
-                if response and response.status_code == 200:
+                if response and response.status_code == 200 and self.admin_token:
                     reviews = response.json()
                     if reviews:
                         self.review_id = reviews[0].get('id')
+                elif not self.admin_token:
+                    self.log_result("Review Admin Features", False, "No admin access for testing admin review features")
             else:
-                self.log_result("Create Review (Pending)", False, f"Failed: {response.status_code if response else 'No response'}")
+                self.log_result("Create Review (Pending)", False, f"Unexpected error: {response.status_code if response else 'No response'}")
                 success = False
 
         # Step 2: Test public reviews endpoint (should only show approved)
@@ -193,7 +230,7 @@ class Phase2BackendTest:
             self.log_result("Get Approved Reviews", False, f"Failed: {response.status_code if response else 'No response'}")
             success = False
 
-        # Step 3: Test admin view (all reviews)
+        # Step 3: Test admin view (all reviews) - skip if no admin token
         if self.admin_token:
             response = self.make_request("GET", f"/reviews?productId={self.product_id}", token=self.admin_token)
             if response and response.status_code == 200:
@@ -203,7 +240,7 @@ class Phase2BackendTest:
                 self.log_result("Get All Reviews (Admin)", False, f"Failed: {response.status_code if response else 'No response'}")
                 success = False
 
-            # Step 4: Test review approval
+            # Step 4: Test review approval/rejection (only if we have a review and admin access)
             if self.review_id:
                 approval_data = {"approved": True}
                 response = self.make_request("PUT", f"/reviews/{self.review_id}", approval_data, token=self.admin_token)
@@ -231,6 +268,8 @@ class Phase2BackendTest:
                 else:
                     self.log_result("Reject Review", False, f"Failed: {response.status_code if response else 'No response'}")
                     success = False
+        else:
+            self.log_result("Review Admin Operations", False, "No admin token - skipping admin review management tests")
 
         return success
 
