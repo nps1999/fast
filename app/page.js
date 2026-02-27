@@ -411,19 +411,15 @@ export default function App() {
               type="text" 
               placeholder="ابحث عن منتج..." 
               className="bg-transparent text-sm text-white outline-none w-32" 
+              defaultValue={searchQuery}
               onKeyDown={(e) => { 
                 if (e.key === 'Enter') {
                   e.preventDefault();
-                  const query = e.target.value;
-                  setSearchQuery(query);
-                  handleSearch(query);
-                }
-              }}
-              onInput={(e) => {
-                // Live search as user types
-                const query = e.target.value;
-                if (query.length === 0) {
-                  setSearchResults(null);
+                  const query = e.target.value.trim();
+                  if (query) {
+                    setSearchQuery(query);
+                    navigate('search');
+                  }
                 }
               }}
               autoComplete="off"
