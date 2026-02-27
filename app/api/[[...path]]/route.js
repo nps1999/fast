@@ -906,7 +906,7 @@ async function handlePayPal(pathParts, method, request, db) {
       
       const { access_token } = await tokenResponse.json();
       
-      // Create PayPal order
+      // Create PayPal order - ALWAYS in USD
       const createOrderResponse = await fetch('https://api-m.paypal.com/v2/checkout/orders', {
         method: 'POST',
         headers: {
@@ -918,8 +918,8 @@ async function handlePayPal(pathParts, method, request, db) {
           purchase_units: [{
             reference_id: orderId,
             amount: {
-              currency_code: currency,
-              value: convertedAmount,
+              currency_code: paypalCurrency, // Always 'USD'
+              value: paypalAmount, // Original price in USD
             },
             description: `طلب FAST STORE #${orderId.slice(0, 8)}`,
           }],
