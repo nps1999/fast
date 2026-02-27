@@ -512,10 +512,6 @@ class Phase2BackendTest:
         """Test FAQs CRUD operations"""
         print("\n=== Testing FAQs CRUD ===")
         
-        if not self.admin_token:
-            self.log_result("FAQs CRUD Setup", False, "No admin token available")
-            return False
-
         success = True
 
         # Test GET FAQs (public)
@@ -526,6 +522,10 @@ class Phase2BackendTest:
         else:
             self.log_result("Get FAQs (Public)", False, f"Failed: {response.status_code if response else 'No response'}")
             success = False
+
+        if not self.admin_token:
+            self.log_result("FAQs CRUD (Admin)", False, "No admin token available - skipping admin-only FAQ tests")
+            return success
 
         # Test POST FAQ (admin only)
         faq_data = {
