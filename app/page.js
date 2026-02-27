@@ -465,8 +465,31 @@ export default function App() {
         <div className="flex gap-2"><Input placeholder="أدخل كود الخصم" value={dc} onChange={e => setDC(e.target.value)} className="bg-[#0a0a15] border-purple-500/20" /><Button className="bg-purple-600 hover:bg-purple-500" onClick={validateD}>تطبيق</Button></div>
         {di && <Badge className="mt-2 bg-green-500/20 text-green-400 border-green-500/30">خصم {di.type==='percentage'?`${di.value}%`:formatPrice(di.value)} مطبق</Badge>}
       </Card>
+      <Card className="bg-[#12121f] border-purple-500/10 p-6 mb-6">
+        <h2 className="font-bold mb-3 flex items-center gap-2"><DollarSign className="w-5 h-5 text-purple-400" /> طريقة الدفع</h2>
+        <div className="space-y-3">
+          <div className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${paymentMethod === 'paypal' ? 'border-purple-500 bg-purple-500/10' : 'border-gray-700 bg-[#0a0a15]'}`} onClick={() => setPaymentMethod('paypal')}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center"><svg className="w-6 h-6" viewBox="0 0 24 24"><path fill="#003087" d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 2.658A.641.641 0 0 1 5.577 2h8.326c3.338 0 5.461 2.028 5.461 5.207 0 4.141-2.898 6.794-7.088 6.794h-1.783l-1.082 5.596a.641.641 0 0 1-.633.54z"/></svg></div>
+                <div><div className="font-semibold">PayPal</div><div className="text-xs text-gray-400">دفع آمن عبر PayPal</div></div>
+              </div>
+              {paymentMethod === 'paypal' && <Check className="w-5 h-5 text-purple-400" />}
+            </div>
+          </div>
+          <div className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${paymentMethod === 'manual' ? 'border-purple-500 bg-purple-500/10' : 'border-gray-700 bg-[#0a0a15]'}`} onClick={() => setPaymentMethod('manual')}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-purple-900/30 flex items-center justify-center"><Truck className="w-5 h-5 text-purple-400" /></div>
+                <div><div className="font-semibold">دفع يدوي</div><div className="text-xs text-gray-400">الدفع عبر التحويل البنكي</div></div>
+              </div>
+              {paymentMethod === 'manual' && <Check className="w-5 h-5 text-purple-400" />}
+            </div>
+          </div>
+        </div>
+      </Card>
       <Button size="lg" className="w-full bg-purple-600 hover:bg-purple-500 text-lg py-6 neon-glow" onClick={placeOrder} disabled={proc}>
-        {proc ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : <Zap className="w-5 h-5 ml-2" />}{proc ? 'جاري المعالجة...' : 'تأكيد الطلب'}
+        {proc ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : (paymentMethod === 'paypal' ? <DollarSign className="w-5 h-5 ml-2" /> : <Zap className="w-5 h-5 ml-2" />)}{proc ? 'جاري المعالجة...' : (paymentMethod === 'paypal' ? 'الدفع عبر PayPal' : 'تأكيد الطلب')}
       </Button>
     </div>);
   };
