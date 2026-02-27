@@ -462,13 +462,18 @@ async function handleOrders(path, method, request, db) {
 
     const total = Math.round((subtotal - discountAmount) * 100) / 100;
     const isFreeOrder = total <= 0;
+    
+    // Status logic: if any item has pending codes, status is pending_delivery
+    // Otherwise, order is completed (whether free or paid)
+    const finalStatus = hasPending ? 'pending_delivery' : 'completed';
+    
     const order = {
       id: orderId, userId: user.id, userEmail: user.email, userName: user.name,
       phone: body.phone || body.whatsAppNumber || '', 
       whatsAppNumber: body.whatsAppNumber || body.phone || '',
       countryCode: body.countryCode || '',
       items: orderItems, subtotal, discountCode: appliedDiscount, discountAmount, total: Math.max(0, total),
-      status: isFreeOrder ? 'completed' : (hasPending ? 'pending_delivery' : 'completed'),
+      status: finalStatus,
       paymentMethod: isFreeOrder ? 'free' : 'direct', 
       createdAt: new Date()
     };
