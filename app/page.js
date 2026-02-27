@@ -19,7 +19,8 @@ import {
   Settings, BarChart3, Shield, Ban, Check, X, Edit, Copy,
   Gamepad2, Zap, Crown, Clock, Mail, Phone, Send,
   Menu, Home, Loader2, CheckCircle, Truck,
-  Upload, MessageCircle, DollarSign, Lock, UserCog, MessageSquare
+  Upload, MessageCircle, DollarSign, Lock, UserCog, MessageSquare,
+  AlertCircle, XCircle
 } from 'lucide-react';
 
 const CURRENCIES = {
