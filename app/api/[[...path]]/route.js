@@ -729,6 +729,265 @@ async function handleStats(path, method, request, db) {
   return res({ totalProducts, totalOrders, totalUsers, pendingOrders, totalCodes, availableCodes, soldCodes, totalRevenue: revenueAgg[0]?.total || 0, pendingReviews, recentOrders });
 }
 
+// ============ PAYPAL INTEGRATION ============
+async function handlePayPal(pathParts, method, request, db) {
+  const action = pathParts[0];
+
+  // Create PayPal Order
+  if (action === 'create-order' && method === 'POST') {
+    const user = await getUser(request, db);
+    if (!user) return res({ error: 'غير مصرح' }, 401);
+    
+    const body = await request.json();
+    const { orderId, currency = 'USD' } = body;
+    
+    if (!orderId) return res({ error: 'معرف الطلب مطلوب' }, 400);
+    
+    // Get order from database
+    const order = await db.collection('orders').findOne({ id: orderId, userId: user.id });
+    if (!order) return res({ error: 'الطلب غير موجود' }, 404);
+    if (order.status !== 'pending') return res({ error: 'الطلب تم معالجته بالفعل' }, 400);
+    
+    // Get exchange rates
+    const rates = await getExchangeRates();
+    const exchangeRate = rates[currency] || 1;
+    const convertedAmount = (order.total * exchangeRate).toFixed(2);
+    
+    try {
+      const paypalClientId = process.env.PAYPAL_CLIENT_ID;
+      const paypalSecret = process.env.PAYPAL_SECRET;
+      
+      if (!paypalClientId || paypalClientId === 'your_paypal_client_id') {
+        return res({ error: 'PayPal غير مكون. يرجى إضافة بيانات PayPal في .env' }, 500);
+      }
+      
+      // Get PayPal access token
+      const auth = Buffer.from(`${paypalClientId}:${paypalSecret}`).toString('base64');
+      const tokenResponse = await fetch('https://api-m.paypal.com/v1/oauth2/token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'grant_type=client_credentials',
+      });
+      
+      if (!tokenResponse.ok) {
+        console.error('PayPal token error:', await tokenResponse.text());
+        return res({ error: 'فشل الاتصال بـ PayPal' }, 500);
+      }
+      
+      const { access_token } = await tokenResponse.json();
+      
+      // Create PayPal order
+      const createOrderResponse = await fetch('https://api-m.paypal.com/v2/checkout/orders', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          intent: 'CAPTURE',
+          purchase_units: [{
+            reference_id: orderId,
+            amount: {
+              currency_code: currency,
+              value: convertedAmount,
+            },
+            description: `طلب FAST STORE #${orderId.slice(0, 8)}`,
+          }],
+          application_context: {
+            brand_name: 'FAST STORE',
+            locale: 'ar-SA',
+            landing_page: 'NO_PREFERENCE',
+            user_action: 'PAY_NOW',
+            return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?payment=success&order=${orderId}`,
+            cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?payment=cancelled&order=${orderId}`,
+          },
+        }),
+      });
+      
+      if (!createOrderResponse.ok) {
+        console.error('PayPal create order error:', await createOrderResponse.text());
+        return res({ error: 'فشل إنشاء طلب الدفع' }, 500);
+      }
+      
+      const paypalOrder = await createOrderResponse.json();
+      
+      // Store PayPal order ID in our database
+      await db.collection('orders').updateOne(
+        { id: orderId },
+        { $set: { paypalOrderId: paypalOrder.id, paymentMethod: 'paypal', updatedAt: new Date() } }
+      );
+      
+      return res({ paypalOrderId: paypalOrder.id, approveUrl: paypalOrder.links.find(l => l.rel === 'approve')?.href });
+      
+    } catch (e) {
+      console.error('PayPal error:', e);
+      return res({ error: 'خطأ في PayPal' }, 500);
+    }
+  }
+
+  // Capture PayPal Payment
+  if (action === 'capture-order' && method === 'POST') {
+    const user = await getUser(request, db);
+    if (!user) return res({ error: 'غير مصرح' }, 401);
+    
+    const body = await request.json();
+    const { orderId, paypalOrderId } = body;
+    
+    if (!orderId || !paypalOrderId) return res({ error: 'معرفات الطلب مطلوبة' }, 400);
+    
+    try {
+      const paypalClientId = process.env.PAYPAL_CLIENT_ID;
+      const paypalSecret = process.env.PAYPAL_SECRET;
+      
+      // Get PayPal access token
+      const auth = Buffer.from(`${paypalClientId}:${paypalSecret}`).toString('base64');
+      const tokenResponse = await fetch('https://api-m.paypal.com/v1/oauth2/token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'grant_type=client_credentials',
+      });
+      
+      const { access_token } = await tokenResponse.json();
+      
+      // Capture the payment
+      const captureResponse = await fetch(`https://api-m.paypal.com/v2/checkout/orders/${paypalOrderId}/capture`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!captureResponse.ok) {
+        console.error('PayPal capture error:', await captureResponse.text());
+        return res({ error: 'فشل تأكيد الدفع' }, 500);
+      }
+      
+      const captureData = await captureResponse.json();
+      
+      if (captureData.status === 'COMPLETED') {
+        // Update order status to completed
+        const order = await db.collection('orders').findOne({ id: orderId });
+        await db.collection('orders').updateOne(
+          { id: orderId },
+          { 
+            $set: { 
+              status: 'completed', 
+              paymentId: paypalOrderId,
+              paymentCompletedAt: new Date(),
+              updatedAt: new Date() 
+            } 
+          }
+        );
+        
+        // Send confirmation email
+        const settings = await db.collection('settings').findOne({});
+        await sendMail(user.email, `تأكيد الطلب #${orderId.slice(0, 8)} - FAST STORE`, orderEmailHtml(order, settings));
+        
+        return res({ success: true, status: 'completed', orderId });
+      } else {
+        return res({ error: 'الدفع غير مكتمل', status: captureData.status }, 400);
+      }
+      
+    } catch (e) {
+      console.error('PayPal capture error:', e);
+      return res({ error: 'خطأ في تأكيد الدفع' }, 500);
+    }
+  }
+
+  return res({ error: 'Not found' }, 404);
+}
+
+// ============ GOOGLE OAUTH (EMERGENT AUTH) ============
+async function handleGoogleAuth(pathParts, method, request, db) {
+  const action = pathParts[0];
+
+  // Exchange session_id for user data from Emergent Auth
+  if (action === 'google-session' && method === 'POST') {
+    const body = await request.json();
+    const { session_id } = body;
+    
+    if (!session_id) return res({ error: 'session_id مطلوب' }, 400);
+    
+    try {
+      // Call Emergent Auth to get user data
+      const response = await fetch('https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data', {
+        headers: {
+          'X-Session-ID': session_id,
+        },
+      });
+      
+      if (!response.ok) {
+        console.error('Emergent Auth error:', await response.text());
+        return res({ error: 'فشل التحقق من Google' }, 401);
+      }
+      
+      const userData = await response.json();
+      const { id: googleId, email, name, picture, session_token } = userData;
+      
+      // Check if user exists by email
+      let user = await db.collection('users').findOne({ email });
+      
+      if (user) {
+        // Update existing user with Google data if needed
+        if (!user.googleId) {
+          await db.collection('users').updateOne(
+            { id: user.id },
+            { 
+              $set: { 
+                googleId, 
+                picture,
+                name: name || user.name,
+                updatedAt: new Date() 
+              } 
+            }
+          );
+        }
+      } else {
+        // Create new user
+        user = {
+          id: uuidv4(),
+          email,
+          name: name || email.split('@')[0],
+          googleId,
+          picture,
+          password: '', // No password for OAuth users
+          role: 'user',
+          banned: false,
+          phone: '',
+          countryCode: '',
+          createdAt: new Date(),
+        };
+        await db.collection('users').insertOne(user);
+      }
+      
+      // Create session with Emergent token
+      const token = session_token || uuidv4();
+      await db.collection('sessions').insertOne({ 
+        token, 
+        userId: user.id, 
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        createdAt: new Date() 
+      });
+      
+      const { password: _, ...safeUser } = user;
+      return res({ user: safeUser, token, session_token });
+      
+    } catch (e) {
+      console.error('Google OAuth error:', e);
+      return res({ error: 'خطأ في تسجيل الدخول عبر Google' }, 500);
+    }
+  }
+
+  return res({ error: 'Not found' }, 404);
+}
+
 // ============ UPLOAD ============
 async function handleUpload(pathParts, method, request, db) {
   if (method !== 'POST') return res({ error: 'Method not allowed' }, 405);
