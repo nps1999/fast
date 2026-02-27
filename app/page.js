@@ -253,6 +253,29 @@ export default function App() {
   }, [currency, exchangeRates]);
 
   const navigate = useCallback((p, id = null) => { setPage(p); setPageId(id); window.scrollTo({ top: 0, behavior: 'smooth' }); setMobileMenu(false); }, []);
+  
+  const handleSearch = useCallback((query) => {
+    if (!query || query.trim() === '') {
+      setSearchResults(null);
+      return;
+    }
+    
+    const q = query.toLowerCase().trim();
+    const results = products.filter(p => 
+      p.name.toLowerCase().includes(q) || 
+      p.description?.toLowerCase().includes(q)
+    );
+    
+    setSearchResults({
+      query: query,
+      results: results,
+      count: results.length
+    });
+    
+    if (results.length > 0) {
+      navigate('search');
+    }
+  }, [products, navigate]);
 
   const addToCart = useCallback((product) => {
     setCart(prev => {
