@@ -399,7 +399,8 @@ export default function App() {
             <SelectTrigger className="w-[130px] bg-[#1a1a2e] border-purple-500/20 h-9 text-xs">
               <SelectValue>
                 <span className="flex items-center gap-1.5">
-                  {CURRENCIES[currency]?.flag} {CURRENCIES[currency]?.symbol} {currency}
+                  <img src={`https://flagcdn.com/16x12/${CURRENCIES[currency]?.flagCode}.png`} alt={currency} className="w-4 h-3 object-cover rounded-sm" />
+                  {CURRENCIES[currency]?.symbol} {currency}
                 </span>
               </SelectValue>
             </SelectTrigger>
