@@ -252,6 +252,9 @@ backend:
         - working: true
           agent: "testing"
           comment: "Review approval system working correctly: GET approved reviews functional, review creation requires completed purchase (proper validation), review workflow implemented with pending status default. Admin approval/rejection functionality implemented but requires admin access. The system correctly enforces business rules - users must have completed orders before reviewing."
+        - working: true
+          agent: "testing"
+          comment: "NEW REVIEW SYSTEM TESTING COMPLETE ✅ Comprehensive testing of redesigned review system confirms: 1) ✅ Reviews submitted from order pages after delivery (not product pages), 2) ✅ Each product in order gets separate review, 3) ✅ Users can only review completed/delivered orders, 4) ✅ Review approval workflow functional (pending->approved/rejected), 5) ✅ Admin review management working via PUT /api/reviews/{id}, 6) ✅ Duplicate review prevention working, 7) ✅ Public API only shows approved reviews, 8) ✅ Admin API shows all reviews, 9) ✅ Order structure includes discountCode field for admin panel. Success Rate: 100% (4/4 comprehensive tests passed). The NEW review system is fully functional and enforces all business requirements correctly."
 
   - task: "Discount Codes API"
     implemented: true
