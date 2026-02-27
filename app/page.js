@@ -551,19 +551,7 @@ export default function App() {
           <Button size="lg" className="w-full bg-purple-600 hover:bg-purple-500 text-lg py-6 neon-glow" onClick={() => addToCart(product)}><ShoppingCart className="w-5 h-5 ml-2" /> أضف إلى السلة</Button>
         </div>
       </div>
-      <section>
-        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" /> التقييمات</h2>
-        {user && <Card className="bg-[#12121f] border-purple-500/10 p-6 mb-6">
-          <h3 className="font-bold mb-3">أضف تقييمك (يتطلب شراء المنتج)</h3>
-          <div className="flex items-center gap-3 mb-3"><span className="text-sm text-gray-400">التقييم:</span><StarRating rating={rr} onRate={setRR} size="md" /></div>
-          <Textarea placeholder="اكتب تعليقك..." value={rc} onChange={e => setRC(e.target.value)} className="bg-[#0a0a15] border-purple-500/20 mb-3" />
-          <Button className="bg-purple-600 hover:bg-purple-500" onClick={submitReview}>إرسال التقييم</Button>
-        </Card>}
-        <div className="space-y-4">{product.reviews?.map(r => <Card key={r.id} className="bg-[#12121f] border-purple-500/10 p-4">
-          <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-sm font-bold">{r.userName?.charAt(0)}</div><span className="font-medium">{r.userName}</span></div><StarRating rating={r.rating} /></div>
-          {r.comment && <p className="text-gray-400 text-sm">{r.comment}</p>}
-        </Card>)}</div>
-      </section>
+      {/* Reviews section removed - will be added in order page after delivery */}
     </div>);
   };
 
