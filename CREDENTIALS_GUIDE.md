@@ -8,6 +8,10 @@
 
 ## 1. تكامل PayPal (بوابة الدفع)
 
+---
+
+## 1. تكامل PayPal (بوابة الدفع)
+
 ### الحصول على بيانات PayPal:
 1. سجّل الدخول إلى: https://developer.paypal.com/
 2. اذهب إلى: Dashboard → My Apps & Credentials
