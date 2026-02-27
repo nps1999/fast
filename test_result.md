@@ -210,13 +210,13 @@ backend:
           agent: "testing"
           comment: "Discount validation API working - correctly rejects invalid discount codes with proper error messages"
 
-  - task: "Settings API"
+  - task: "Settings API (including logo, favicon, preview image)"
     implemented: true
     working: true
     file: "/app/app/api/[[...path]]/route.js"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: "NA"
           agent: "main"
@@ -224,6 +224,9 @@ backend:
         - working: true
           agent: "testing"
           comment: "Settings API working - GET settings returns proper configuration data"
+        - working: "NA"
+          agent: "main"
+          comment: "Enhanced settings API to include logo, favicon, and openGraphImage management. Now supports full site branding configuration. Needs retesting after enhancement."
 
   - task: "Image Upload API"
     implemented: true
