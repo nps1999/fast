@@ -396,7 +396,13 @@ export default function App() {
             />
           </div>
           <Select value={currency} onValueChange={changeCurrency}>
-            <SelectTrigger className="w-[100px] bg-[#1a1a2e] border-purple-500/20 h-9 text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[130px] bg-[#1a1a2e] border-purple-500/20 h-9 text-xs">
+              <SelectValue>
+                <span className="flex items-center gap-1.5">
+                  {CURRENCIES[currency]?.flag} {CURRENCIES[currency]?.symbol} {currency}
+                </span>
+              </SelectValue>
+            </SelectTrigger>
             <SelectContent className="bg-[#12121f] border-purple-500/20">{Object.entries(CURRENCIES).map(([k,v]) => <SelectItem key={k} value={k}><span className="flex items-center gap-2">{v.flag} {v.symbol} {k} - {v.name}</span></SelectItem>)}</SelectContent>
           </Select>
           <button onClick={() => navigate('cart')} className="relative p-2 hover:bg-purple-500/20 rounded-lg">
