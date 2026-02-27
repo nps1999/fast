@@ -180,13 +180,13 @@ backend:
           agent: "testing"
           comment: "Order flow working perfectly - auto-delivery logic correctly marks orders as 'pending_delivery' when no codes available, order creation and retrieval working"
 
-  - task: "Reviews API"
+  - task: "Reviews API with Admin Approval System"
     implemented: true
-    working: true
+    working: "NA"
     file: "/app/app/api/[[...path]]/route.js"
     stuck_count: 0
-    priority: "medium"
-    needs_retesting: false
+    priority: "high"
+    needs_retesting: true
     status_history:
         - working: "NA"
           agent: "main"
@@ -194,6 +194,9 @@ backend:
         - working: true
           agent: "testing"
           comment: "Reviews API working - GET reviews by product and POST create review both functional"
+        - working: "NA"
+          agent: "main"
+          comment: "Enhanced review system: Added admin approval workflow with status (pending/approved/rejected), PUT /api/reviews/:id/approve endpoint, GET /api/reviews?approved=true for public reviews, only approved reviews shown on product pages. Needs full testing of approval workflow."
 
   - task: "Discount Codes API"
     implemented: true
