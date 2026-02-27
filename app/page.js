@@ -711,23 +711,36 @@ export default function App() {
     const [oL, setOL] = useState(true);
     const [reviewStates, setReviewStates] = useState({}); 
     const [existingReviews, setExistingReviews] = useState({});
+    const [checkingReviews, setCheckingReviews] = useState(true);
     
     useEffect(() => {
       if (pageId && user) {
-        api(`/orders/${pageId}`,{},token).then(order => {
+        setCheckingReviews(true);
+        api(`/orders/${pageId}`,{},token).then(async (order) => {
           setOrder(order);
-          if (order.items) {
-            order.items.forEach(item => {
+          
+          // Check all reviews in parallel and wait for all
+          if (order.items && order.items.length > 0) {
+            const reviewChecks = order.items.map(item =>
               api(`/reviews?productId=${item.productId}&userId=${user.id}`,{},token)
-                .then(reviews => {
-                  if (reviews.length > 0) {
-                    setExistingReviews(prev => ({...prev, [item.productId]: true}));
-                  }
-                })
-                .catch(() => {});
+                .then(reviews => ({productId: item.productId, hasReview: reviews.length > 0}))
+                .catch(() => ({productId: item.productId, hasReview: false}))
+            );
+            
+            const results = await Promise.all(reviewChecks);
+            const reviewsMap = {};
+            results.forEach(r => {
+              if (r.hasReview) reviewsMap[r.productId] = true;
             });
+            setExistingReviews(reviewsMap);
           }
-        }).catch(()=>{}).finally(() => setOL(false));
+          
+          setCheckingReviews(false);
+          setOL(false);
+        }).catch(()=>{
+          setOL(false);
+          setCheckingReviews(false);
+        });
       }
     }, [pageId, user]);
     
@@ -755,7 +768,7 @@ export default function App() {
       }));
     };
     
-    if (oL) return <div className="text-center py-16"><Loader2 className="w-8 h-8 animate-spin text-purple-400 mx-auto" /></div>;
+    if (oL || checkingReviews) return <div className="text-center py-16"><Loader2 className="w-8 h-8 animate-spin text-purple-400 mx-auto" /><p className="text-gray-400 text-sm mt-2">جاري التحميل...</p></div>;
     if (!order) return <div className="text-center py-16 text-gray-500">الطلب غير موجود</div>;
     
     const canReview = order.status === 'delivered' || order.status === 'completed';
