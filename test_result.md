@@ -79,6 +79,30 @@
           agent: "main"
           comment: "ROOT CAUSE IDENTIFIED: Backend correctly sets status to 'pending_delivery' for out-of-stock orders. However, frontend CheckoutPage was forcing free orders (100% discount) to 'completed' status regardless of stock. FIXED: Updated free order logic to respect backend status - if order is 'pending_delivery' (no stock), it stays that way even for free orders."
 
+  - task: "Review system redesign - reviews from order page after delivery"
+    implemented: true
+    working: true
+    file: "/app/app/page.js, /app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "FULLY IMPLEMENTED: 1) Reviews removed from product pages, 2) Review forms added to OrderDetail page (appear ONLY for completed/delivered orders), 3) Each product in order has separate review form, 4) API updated to support userId filter, 5) Fixed timing issue where forms appeared/disappeared using Promise.all(), 6) Discount codes now display in admin panel. Backend testing confirmed all functionality working."
+
+  - task: "Payment failed/cancelled pages"
+    implemented: true
+    working: true
+    file: "/app/app/page.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "NEW FEATURE: Added dedicated pages for payment failures and cancellations. Users now see clear messages when payment fails or is cancelled, with options to return to cart or homepage. Pages include proper icons and Arabic messaging."
+
 frontend:
 
 ##   - task: "Task name"
