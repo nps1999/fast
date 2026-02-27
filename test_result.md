@@ -281,8 +281,8 @@ backend:
     working: "NA"
     file: "/app/app/api/[[...path]]/route.js"
     stuck_count: 0
-    priority: "low"
-    needs_retesting: false
+    priority: "medium"
+    needs_retesting: true
     status_history:
         - working: "NA"
           agent: "main"
@@ -290,6 +290,57 @@ backend:
         - working: "NA"
           agent: "testing"
           comment: "Not tested due to low priority, but API endpoints exist and follow same pattern as other working endpoints"
+        - working: "NA"
+          agent: "main"
+          comment: "Slider management is critical for homepage carousel (auto-scrolls every 5 seconds). FAQ management for contact section. Both need testing."
+
+  - task: "Password Reset API (email-based)"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "NEW FEATURE: POST /api/auth/request-password-reset sends reset email with token, POST /api/auth/reset-password validates token and updates password. Uses nodemailer with Gmail SMTP. REQUIRES SMTP CREDENTIALS IN .ENV to test fully. Can test token generation/validation logic without SMTP."
+
+  - task: "Email Notifications (Order Confirmations)"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "NEW FEATURE: HTML email sent on successful order with gaming-themed design, includes order details and link to order page. Integrated into order creation flow. REQUIRES SMTP CREDENTIALS IN .ENV to test."
+
+  - task: "User Profile Management API"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "NEW FEATURE: PUT /api/auth/profile allows users to update name and email. GET /api/auth/profile returns user profile data. Needs testing."
+
+  - task: "WhatsApp Number Collection at Checkout"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "NEW FEATURE: Orders now accept whatsAppNumber and countryCode fields. Stored in order document for admin to contact customer. Visible in admin order view with direct WhatsApp chat link."
 
   - task: "Security (rate limiting, headers, input validation)"
     implemented: true
