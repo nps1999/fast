@@ -87,6 +87,36 @@ const COUNTRY_CODES = [
   { code: '+679', name: 'فيجي', flag: '🇫🇯' }, { code: '+675', name: 'بابوا غينيا', flag: '🇵🇬' },
 ];
 
+// SearchBar Component - Isolated to prevent page re-renders
+function SearchBar({ onSearch, className = "" }) {
+  const [localQuery, setLocalQuery] = useState('');
+  
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (localQuery.trim()) {
+        onSearch(localQuery.trim());
+      }
+    }
+  };
+  
+  return (
+    <div className={`flex items-center bg-[#1a1a2e] rounded-lg border border-purple-500/20 px-3 py-1.5 ${className}`}>
+      <Search className="w-4 h-4 text-gray-400 ml-2" />
+      <input 
+        type="text" 
+        placeholder="ابحث عن منتج..." 
+        className="bg-transparent text-sm text-white outline-none w-32" 
+        value={localQuery}
+        onChange={(e) => setLocalQuery(e.target.value)}
+        onKeyDown={handleKeyDown}
+        autoComplete="off"
+        spellCheck="false"
+      />
+    </div>
+  );
+}
+
 async function api(url, opts = {}, token = '') {
   const headers = opts.isFormData ? {} : { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
