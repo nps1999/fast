@@ -482,11 +482,19 @@ async function handleOrders(path, method, request, db) {
   }
 
   if (method === 'PUT' && id) {
-    if (!user || user.role !== 'admin') return res({ error: 'غير مصرح' }, 403);
     const body = await request.json();
+    
+    // Allow users to update their own free orders, admins can update any
+    const order = await db.collection('orders').findOne({ id });
+    if (!order) return res({ error: 'الطلب غير موجود' }, 404);
+    
+    const isOwner = user && user.id === order.userId;
+    const isAdmin = user && user.role === 'admin';
+    
+    if (!isOwner && !isAdmin) return res({ error: 'غير مصرح' }, 403);
+    
     if (body.action === 'deliver') {
-      const order = await db.collection('orders').findOne({ id });
-      if (!order) return res({ error: 'الطلب غير موجود' }, 404);
+      if (!isAdmin) return res({ error: 'غير مصرح' }, 403);
       const itemIdx = body.itemIndex;
       const newCodes = body.codes || [];
       if (itemIdx !== undefined && order.items[itemIdx]) {
@@ -505,7 +513,11 @@ async function handleOrders(path, method, request, db) {
       }
       return res({ ...order, status });
     }
-    if (body.status) await db.collection('orders').updateOne({ id }, { $set: { status: body.status } });
+    
+    // Update status (allow for free orders by owner, or admin for any)
+    if (body.status) {
+      await db.collection('orders').updateOne({ id }, { $set: { status: body.status, updatedAt: new Date() } });
+    }
     return res(await db.collection('orders').findOne({ id }));
   }
   return res({ error: 'Not found' }, 404);
