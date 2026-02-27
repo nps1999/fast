@@ -1,480 +1,586 @@
 #!/usr/bin/env python3
+"""
+Backend Testing for Order Creation Flow - Free Orders and Out-of-Stock Products
+
+Test Scenarios:
+1. Free Order with Stock Available - Should be 'completed'
+2. Free Order with Out-of-Stock Product - Should be 'pending_delivery'  
+3. Paid Order with Out-of-Stock Product - Should be 'pending_delivery'
+4. Mixed Order (some stock, some out of stock) - Should be 'pending_delivery'
+"""
 
 import requests
 import json
-import sys
+import time
 import uuid
-from datetime import datetime
+from typing import Dict, Any, List
 
-# Base URL for the API
+# Configuration
 BASE_URL = "https://digital-key-store.preview.emergentagent.com/api"
+HEADERS = {"Content-Type": "application/json"}
 
-class DigitalStoreBackendTest:
+# Test credentials
+TEST_ADMIN = {
+    "name": "Test Admin",
+    "email": f"admin_test_{int(time.time())}@test.com",
+    "password": "testpass123"
+}
+
+TEST_USER = {
+    "name": "Test User",
+    "email": f"user_test_{int(time.time())}@test.com", 
+    "password": "testpass123"
+}
+
+class BackendTester:
     def __init__(self):
         self.admin_token = None
         self.user_token = None
-        self.category_id = None
-        self.product_id = None
-        self.order_id = None
-        self.test_results = []
+        self.test_category_id = None
+        self.test_product_with_stock_id = None
+        self.test_product_no_stock_id = None
+        self.test_discount_code = None
         
-    def log_result(self, test_name, passed, message="", details=""):
-        """Log test result"""
-        status = "✅ PASS" if passed else "❌ FAIL"
-        result = f"{status} - {test_name}: {message}"
-        if details:
-            result += f"\n  Details: {details}"
-        print(result)
-        self.test_results.append({
-            'test': test_name,
-            'passed': passed,
-            'message': message,
-            'details': details
-        })
+    def log(self, message: str, level: str = "INFO"):
+        """Log test messages with timestamp"""
+        timestamp = time.strftime("%H:%M:%S")
+        print(f"[{timestamp}] {level}: {message}")
         
-    def make_request(self, method, endpoint, data=None, token=None, files=None):
-        """Make HTTP request with proper headers"""
-        url = f"{BASE_URL}/{endpoint.lstrip('/')}"
-        headers = {"Content-Type": "application/json"}
-        
+    def make_request(self, method: str, endpoint: str, data: Dict = None, token: str = None) -> requests.Response:
+        """Make HTTP request with proper error handling"""
+        url = f"{BASE_URL}{endpoint}"
+        headers = HEADERS.copy()
         if token:
             headers["Authorization"] = f"Bearer {token}"
             
-        if files:
-            # Remove content-type for file uploads
-            headers.pop("Content-Type", None)
-            
         try:
             if method == "GET":
-                response = requests.get(url, headers=headers, timeout=30)
+                response = requests.get(url, headers=headers, timeout=10)
             elif method == "POST":
-                if files:
-                    response = requests.post(url, headers=headers, files=files, timeout=30)
-                else:
-                    response = requests.post(url, headers=headers, json=data, timeout=30)
+                response = requests.post(url, headers=headers, json=data, timeout=10)
             elif method == "PUT":
-                response = requests.put(url, headers=headers, json=data, timeout=30)
+                response = requests.put(url, headers=headers, json=data, timeout=10)
             elif method == "DELETE":
-                response = requests.delete(url, headers=headers, timeout=30)
+                response = requests.delete(url, headers=headers, timeout=10)
             else:
                 raise ValueError(f"Unsupported method: {method}")
                 
             return response
-        except Exception as e:
-            print(f"Request failed: {e}")
-            return None
-
-    def test_basic_connectivity(self):
-        """Test basic API connectivity"""
-        print("\n=== Testing Basic API Connectivity ===")
-        
-        # Test admin check endpoint (no auth required)
-        response = self.make_request("GET", "/auth/check-admin")
-        if response and response.status_code == 200:
-            data = response.json()
-            has_admin = data.get('hasAdmin', False)
-            self.log_result("Admin Check Endpoint", True, f"API responds correctly, hasAdmin: {has_admin}")
-        else:
-            self.log_result("Admin Check Endpoint", False, f"Failed: {response.status_code if response else 'No response'}")
-            return False
-
-        # Test settings endpoint (public)
-        response = self.make_request("GET", "/settings")
-        if response and response.status_code == 200:
-            self.log_result("Settings Endpoint", True, "Settings API working")
-        else:
-            self.log_result("Settings Endpoint", False, f"Failed: {response.status_code if response else 'No response'}")
-
-        # Test exchange rates endpoint (public)
-        response = self.make_request("GET", "/exchange-rates")
-        if response and response.status_code == 200:
-            data = response.json()
-            rates = data.get('rates', {})
-            required_currencies = ['USD', 'SAR', 'KWD', 'AED']
-            if all(curr in rates for curr in required_currencies):
-                self.log_result("Exchange Rates Endpoint", True, f"All currencies available: {list(rates.keys())}")
-            else:
-                self.log_result("Exchange Rates Endpoint", False, f"Missing currencies. Got: {list(rates.keys())}")
-        else:
-            self.log_result("Exchange Rates Endpoint", False, f"Failed: {response.status_code if response else 'No response'}")
-
-        return True
-
-    def test_auth_flow(self):
-        """Test complete authentication flow"""
-        print("\n=== Testing Authentication Flow ===")
-        
-        # Test user registration
-        user_data = {
-            "name": "Test User",
-            "email": f"user{uuid.uuid4().hex[:8]}@digitalstore.test",
-            "password": "password123"
-        }
-        
-        response = self.make_request("POST", "/auth/register", user_data)
-        if response and response.status_code == 200:
-            data = response.json()
-            self.user_token = data.get('token')
-            user = data.get('user', {})
-            self.log_result("User Registration", True, f"User registered: {user.get('email')}")
-        else:
-            self.log_result("User Registration", False, f"Registration failed: {response.status_code if response else 'No response'}")
-            return False
-
-        # Test session check
-        response = self.make_request("GET", "/auth/session", token=self.user_token)
-        if response and response.status_code == 200:
-            data = response.json()
-            user = data.get('user')
-            if user:
-                self.log_result("Session Check", True, f"Session verified for user: {user.get('email')}")
-            else:
-                self.log_result("Session Check", False, "No user in session response")
-        else:
-            self.log_result("Session Check", False, f"Session check failed: {response.status_code if response else 'No response'}")
-
-        # Test logout
-        response = self.make_request("POST", "/auth/logout", token=self.user_token)
-        if response and response.status_code == 200:
-            self.log_result("Logout", True, "Logout successful")
-        else:
-            self.log_result("Logout", False, f"Logout failed: {response.status_code if response else 'No response'}")
-
-        # Test login with registered user
-        login_data = {
-            "email": user_data["email"],
-            "password": user_data["password"]
-        }
-        response = self.make_request("POST", "/auth/login", login_data)
-        if response and response.status_code == 200:
-            data = response.json()
-            self.user_token = data.get('token')
-            self.log_result("User Login", True, "User login successful")
-            return True
-        else:
-            self.log_result("User Login", False, f"User login failed: {response.status_code if response else 'No response'}")
-            return False
-
-    def test_public_endpoints(self):
-        """Test public endpoints that don't require authentication"""
-        print("\n=== Testing Public Endpoints ===")
-        
-        success = True
-        
-        # Test GET categories (public)
-        response = self.make_request("GET", "/categories")
-        if response and response.status_code == 200:
-            categories = response.json()
-            self.log_result("Get Categories", True, f"Retrieved {len(categories)} categories")
-            # Store first category ID for later tests
-            if categories:
-                self.category_id = categories[0].get('id')
-        else:
-            self.log_result("Get Categories", False, f"Failed: {response.status_code if response else 'No response'}")
-            success = False
-
-        # Test GET products (public)
-        response = self.make_request("GET", "/products")
-        if response and response.status_code == 200:
-            products = response.json()
-            self.log_result("Get Products", True, f"Retrieved {len(products)} products")
-            # Store first product ID for later tests
-            if products:
-                self.product_id = products[0].get('id')
-                product_stock = products[0].get('stock', 0)
-                self.log_result("Product Stock Info", True, f"First product has {product_stock} codes available")
-        else:
-            self.log_result("Get Products", False, f"Failed: {response.status_code if response else 'No response'}")
-            success = False
-
-        # Test product search
-        if self.product_id:
-            response = self.make_request("GET", f"/products/{self.product_id}")
-            if response and response.status_code == 200:
-                product = response.json()
-                self.log_result("Get Product Details", True, f"Product details: {product.get('name', 'N/A')}")
-            else:
-                self.log_result("Get Product Details", False, f"Failed: {response.status_code if response else 'No response'}")
-                success = False
-
-        # Test product filtering by category
-        if self.category_id:
-            response = self.make_request("GET", f"/products?categoryId={self.category_id}")
-            if response and response.status_code == 200:
-                filtered_products = response.json()
-                self.log_result("Filter Products by Category", True, f"Found {len(filtered_products)} products in category")
-            else:
-                self.log_result("Filter Products by Category", False, f"Failed: {response.status_code if response else 'No response'}")
-                success = False
-                
-        return success
-
-    def test_order_creation(self):
-        """Test order creation (user functionality)"""
-        print("\n=== Testing Order Creation ===")
-        
-        if not self.user_token:
-            self.log_result("Order Creation Setup", False, "No user token available")
-            return False
-
-        if not self.product_id:
-            self.log_result("Order Creation Setup", False, "No product ID available")
-            return False
-
-        # Test CREATE order (user)
-        order_data = {
-            "items": [
-                {
-                    "productId": self.product_id,
-                    "quantity": 1
-                }
-            ]
-        }
-        
-        response = self.make_request("POST", "/orders", order_data, token=self.user_token)
-        if response and response.status_code == 201:
-            data = response.json()
-            self.order_id = data.get('id')
-            status = data.get('status')
-            items = data.get('items', [])
-            total = data.get('total', 0)
-            
-            delivered_codes = items[0].get('deliveredCodes', []) if items else []
-            pending_count = items[0].get('pendingCount', 0) if items else 0
-            
-            self.log_result("Create Order", True, f"Order created with status: {status}, total: ${total}")
-            
-            if len(delivered_codes) > 0:
-                self.log_result("Auto Code Delivery", True, f"Auto-delivered {len(delivered_codes)} codes")
-                # Don't expose actual codes in logs for security
-                self.log_result("Code Delivery Verification", True, "Codes successfully allocated to order")
-            elif pending_count > 0:
-                self.log_result("Pending Delivery", True, f"Order marked as pending with {pending_count} codes needed")
-            else:
-                self.log_result("Order Processing", False, "No codes delivered and no pending count")
-                
-        else:
-            self.log_result("Create Order", False, f"Failed: {response.status_code if response else 'No response'}")
-            return False
-
-        # Test GET order details
-        if self.order_id:
-            response = self.make_request("GET", f"/orders/{self.order_id}", token=self.user_token)
-            if response and response.status_code == 200:
-                order = response.json()
-                self.log_result("Get Order Details", True, f"Order details retrieved: {order.get('id')}")
-            else:
-                self.log_result("Get Order Details", False, f"Failed: {response.status_code if response else 'No response'}")
-
-        # Test GET user's orders
-        response = self.make_request("GET", "/orders", token=self.user_token)
-        if response and response.status_code == 200:
-            orders = response.json()
-            self.log_result("Get User Orders", True, f"Retrieved {len(orders)} orders for user")
-        else:
-            self.log_result("Get User Orders", False, f"Failed: {response.status_code if response else 'No response'}")
-
-        return True
-
-    def test_reviews(self):
-        """Test reviews functionality"""
-        print("\n=== Testing Reviews ===")
-        
-        if not self.user_token or not self.product_id:
-            self.log_result("Reviews Setup", False, "Missing user token or product ID")
-            return False
-
-        success = True
-
-        # Test GET reviews by product (public)
-        response = self.make_request("GET", f"/reviews?productId={self.product_id}")
-        if response and response.status_code == 200:
-            reviews = response.json()
-            self.log_result("Get Product Reviews", True, f"Retrieved {len(reviews)} reviews")
-        else:
-            self.log_result("Get Product Reviews", False, f"Failed: {response.status_code if response else 'No response'}")
-            success = False
-
-        # Test POST review (user must be logged in)
-        review_data = {
-            "productId": self.product_id,
-            "rating": 5,
-            "comment": "Great product, fast delivery of digital codes!"
-        }
-        
-        response = self.make_request("POST", "/reviews", review_data, token=self.user_token)
-        if response and response.status_code == 201:
-            self.log_result("Create Review", True, "Review created successfully")
-        else:
-            # Could fail if user already reviewed this product
-            if response and response.status_code == 400:
-                self.log_result("Create Review", True, "Review creation handled (user may have already reviewed)")
-            else:
-                self.log_result("Create Review", False, f"Failed: {response.status_code if response else 'No response'}")
-                success = False
-                
-        return success
-
-    def test_discount_validation(self):
-        """Test discount validation (public endpoint)"""
-        print("\n=== Testing Discount Validation ===")
-        
-        # Test validate non-existent discount
-        validate_data = {"code": "NONEXISTENT"}
-        response = self.make_request("POST", "/discounts/validate", validate_data)
-        if response and response.status_code == 400:
-            self.log_result("Invalid Discount Validation", True, "Correctly rejected invalid discount code")
-            return True
-        else:
-            self.log_result("Invalid Discount Validation", False, f"Should reject invalid code, got: {response.status_code if response else 'No response'}")
-            return False
-
-    def test_admin_protected_endpoints(self):
-        """Test that admin-protected endpoints correctly reject non-admin users"""
-        print("\n=== Testing Admin Access Control ===")
-        
-        if not self.user_token:
-            self.log_result("Admin Access Control Setup", False, "No user token available")
-            return False
-
-        success = True
-
-        # Test admin-only category creation
-        category_data = {"name": "Unauthorized Category", "active": True}
-        response = self.make_request("POST", "/categories", category_data, token=self.user_token)
-        if response and response.status_code == 403:
-            self.log_result("Category Creation Access Control", True, "Correctly rejected non-admin user")
-        else:
-            self.log_result("Category Creation Access Control", False, f"Should reject non-admin, got: {response.status_code if response else 'No response'}")
-            success = False
-
-        # Test admin-only product creation
-        product_data = {"name": "Unauthorized Product", "price": 10}
-        response = self.make_request("POST", "/products", product_data, token=self.user_token)
-        if response and response.status_code == 403:
-            self.log_result("Product Creation Access Control", True, "Correctly rejected non-admin user")
-        else:
-            self.log_result("Product Creation Access Control", False, f"Should reject non-admin, got: {response.status_code if response else 'No response'}")
-            success = False
-
-        # Test admin-only codes endpoint
-        response = self.make_request("GET", "/codes?productId=test", token=self.user_token)
-        if response and response.status_code == 403:
-            self.log_result("Codes Access Control", True, "Correctly rejected non-admin user")
-        else:
-            self.log_result("Codes Access Control", False, f"Should reject non-admin, got: {response.status_code if response else 'No response'}")
-            success = False
-            
-        return success
-
-    def test_input_validation(self):
-        """Test input validation and error handling"""
-        print("\n=== Testing Input Validation ===")
-        
-        success = True
-
-        # Test registration with missing fields
-        incomplete_data = {"email": "incomplete@test.com"}
-        response = self.make_request("POST", "/auth/register", incomplete_data)
-        if response and response.status_code == 400:
-            self.log_result("Registration Validation", True, "Correctly rejected incomplete registration data")
-        else:
-            self.log_result("Registration Validation", False, f"Should reject incomplete data, got: {response.status_code if response else 'No response'}")
-            success = False
-
-        # Test login with wrong credentials
-        wrong_creds = {"email": "nonexistent@test.com", "password": "wrongpass"}
-        response = self.make_request("POST", "/auth/login", wrong_creds)
-        if response and response.status_code == 401:
-            self.log_result("Login Validation", True, "Correctly rejected wrong credentials")
-        else:
-            self.log_result("Login Validation", False, f"Should reject wrong credentials, got: {response.status_code if response else 'No response'}")
-            success = False
-
-        # Test order with empty cart
-        if self.user_token:
-            empty_order = {"items": []}
-            response = self.make_request("POST", "/orders", empty_order, token=self.user_token)
-            if response and response.status_code == 400:
-                self.log_result("Empty Cart Validation", True, "Correctly rejected empty cart")
-            else:
-                self.log_result("Empty Cart Validation", False, f"Should reject empty cart, got: {response.status_code if response else 'No response'}")
-                success = False
-                
-        return success
-
-    def run_all_tests(self):
-        """Run all backend tests"""
-        print("🚀 Starting Digital Card Store Backend API Tests")
-        print("=" * 60)
-        
-        success = True
-        success &= self.test_basic_connectivity()
-        success &= self.test_auth_flow()
-        success &= self.test_public_endpoints()
-        success &= self.test_order_creation()
-        success &= self.test_reviews()
-        success &= self.test_discount_validation()
-        success &= self.test_admin_protected_endpoints()
-        success &= self.test_input_validation()
-        
-        # Print summary
-        print("\n" + "=" * 60)
-        print("📊 TEST SUMMARY")
-        print("=" * 60)
-        
-        passed_tests = sum(1 for r in self.test_results if r['passed'])
-        total_tests = len(self.test_results)
-        
-        print(f"Total Tests: {total_tests}")
-        print(f"Passed: {passed_tests}")
-        print(f"Failed: {total_tests - passed_tests}")
-        print(f"Success Rate: {(passed_tests/total_tests*100):.1f}%")
-        
-        # Show failed tests
-        failed_tests = [r for r in self.test_results if not r['passed']]
-        if failed_tests:
-            print("\n❌ Failed Tests:")
-            for test in failed_tests:
-                print(f"  - {test['test']}: {test['message']}")
-        else:
-            print("\n✅ All tests passed!")
-        
-        # Show critical functionalities status
-        print("\n🔍 Critical Functionalities Status:")
-        critical_tests = [
-            "User Registration", "User Login", "Session Check", 
-            "Get Categories", "Get Products", "Create Order", 
-            "Auto Code Delivery", "Get Order Details"
-        ]
-        
-        for test_name in critical_tests:
-            test_result = next((r for r in self.test_results if r['test'] == test_name), None)
-            if test_result:
-                status = "✅" if test_result['passed'] else "❌"
-                print(f"  {status} {test_name}")
-            else:
-                print(f"  ⚠️  {test_name} (not tested)")
-        
-        return success and len(failed_tests) == 0
-
-
-def main():
-    """Main test runner"""
-    tester = DigitalStoreBackendTest()
+        except requests.exceptions.RequestException as e:
+            self.log(f"Request failed: {e}", "ERROR")
+            raise
     
-    try:
-        success = tester.run_all_tests()
-        sys.exit(0 if success else 1)
-    except KeyboardInterrupt:
-        print("\n⚠️  Tests interrupted by user")
-        sys.exit(1)
-    except Exception as e:
-        print(f"\n💥 Test runner crashed: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
-
+    def setup_admin_and_user(self) -> bool:
+        """Setup test admin and user accounts"""
+        try:
+            # Check if admin exists
+            response = self.make_request("GET", "/auth/check-admin")
+            if response.status_code == 200:
+                has_admin = response.json().get("hasAdmin", False)
+                
+                if not has_admin:
+                    # Create admin
+                    self.log("Creating test admin...")
+                    response = self.make_request("POST", "/auth/setup-admin", TEST_ADMIN)
+                    if response.status_code == 200:
+                        data = response.json()
+                        self.admin_token = data["token"]
+                        self.log("✅ Admin created successfully")
+                    else:
+                        self.log(f"❌ Failed to create admin: {response.text}", "ERROR")
+                        return False
+                else:
+                    # Try to login as existing admin (this will fail, but we'll create a new user as admin)
+                    self.log("Admin exists, attempting to create new admin user...")
+                    # Create a regular user first, then we'll need to test with that
+                    response = self.make_request("POST", "/auth/register", TEST_USER)
+                    if response.status_code == 200:
+                        data = response.json()
+                        self.user_token = data["token"]
+                        self.log("✅ Test user created for testing")
+                        
+                        # We'll use this user token, but we need admin access for some operations
+                        # Let's try to create another admin account with different email
+                        admin_email = f"admin_test_{int(time.time())}_alt@test.com"
+                        try:
+                            admin_response = self.make_request("POST", "/auth/setup-admin", {
+                                **TEST_ADMIN,
+                                "email": admin_email
+                            })
+                            if admin_response.status_code == 200:
+                                self.admin_token = admin_response.json()["token"]
+                                self.log("✅ Alternative admin created successfully")
+                            else:
+                                self.log("⚠️  Could not create admin, will use user token for limited testing")
+                                self.admin_token = self.user_token  # Fallback
+                        except:
+                            self.log("⚠️  Admin creation failed, using user token")
+                            self.admin_token = self.user_token  # Fallback
+                    else:
+                        self.log(f"❌ Failed to create test user: {response.text}", "ERROR")
+                        return False
+            else:
+                self.log(f"❌ Failed to check admin status: {response.text}", "ERROR")
+                return False
+                
+            # Create test user if we don't have one
+            if not self.user_token:
+                self.log("Creating test user...")
+                response = self.make_request("POST", "/auth/register", TEST_USER)
+                if response.status_code == 200:
+                    data = response.json()
+                    self.user_token = data["token"]
+                    self.log("✅ Test user created successfully")
+                else:
+                    self.log(f"❌ Failed to create user: {response.text}", "ERROR")
+                    return False
+                    
+            return True
+            
+        except Exception as e:
+            self.log(f"❌ Setup failed: {e}", "ERROR")
+            return False
+    
+    def create_test_data(self) -> bool:
+        """Create test category, products, and discount codes"""
+        try:
+            # Create test category
+            self.log("Creating test category...")
+            category_data = {
+                "name": f"Test Category {int(time.time())}",
+                "active": True
+            }
+            
+            response = self.make_request("POST", "/categories", category_data, self.admin_token)
+            if response.status_code == 201:
+                self.test_category_id = response.json()["id"]
+                self.log("✅ Test category created")
+            else:
+                self.log(f"⚠️  Failed to create category, will use None: {response.text}")
+                self.test_category_id = None
+            
+            # Create product with stock
+            self.log("Creating test product with stock...")
+            product_with_stock_data = {
+                "name": f"Gaming Card With Stock {int(time.time())}",
+                "description": "Test product with available codes",
+                "price": 10.00,
+                "categoryId": self.test_category_id,
+                "active": True
+            }
+            
+            response = self.make_request("POST", "/products", product_with_stock_data, self.admin_token)
+            if response.status_code == 201:
+                self.test_product_with_stock_id = response.json()["id"]
+                self.log("✅ Product with stock created")
+                
+                # Add some codes for this product
+                self.log("Adding codes to product...")
+                codes_data = {
+                    "productId": self.test_product_with_stock_id,
+                    "codes": [
+                        f"CODE-{uuid.uuid4().hex[:8].upper()}",
+                        f"CODE-{uuid.uuid4().hex[:8].upper()}",
+                        f"CODE-{uuid.uuid4().hex[:8].upper()}"
+                    ]
+                }
+                
+                codes_response = self.make_request("POST", "/codes", codes_data, self.admin_token)
+                if codes_response.status_code == 201:
+                    self.log(f"✅ Added {codes_response.json()['added']} codes to product")
+                else:
+                    self.log(f"⚠️  Failed to add codes: {codes_response.text}")
+            else:
+                self.log(f"❌ Failed to create product with stock: {response.text}", "ERROR")
+                return False
+            
+            # Create product without stock (out-of-stock)
+            self.log("Creating test product without stock...")
+            product_no_stock_data = {
+                "name": f"Gaming Card No Stock {int(time.time())}",
+                "description": "Test product with no available codes",
+                "price": 15.00,
+                "categoryId": self.test_category_id,
+                "active": True
+            }
+            
+            response = self.make_request("POST", "/products", product_no_stock_data, self.admin_token)
+            if response.status_code == 201:
+                self.test_product_no_stock_id = response.json()["id"]
+                self.log("✅ Product without stock created (no codes added)")
+            else:
+                self.log(f"❌ Failed to create product without stock: {response.text}", "ERROR")
+                return False
+            
+            # Create 100% discount code for free orders
+            self.log("Creating 100% discount code...")
+            discount_code = f"FREE100_{int(time.time())}"
+            discount_data = {
+                "code": discount_code,
+                "type": "percentage",
+                "value": 100,  # 100% discount
+                "minOrder": 0,
+                "active": True
+            }
+            
+            response = self.make_request("POST", "/discounts", discount_data, self.admin_token)
+            if response.status_code == 201:
+                self.test_discount_code = discount_code
+                self.log("✅ 100% discount code created")
+            else:
+                self.log(f"⚠️  Failed to create discount code, will test without: {response.text}")
+                
+            return True
+            
+        except Exception as e:
+            self.log(f"❌ Test data creation failed: {e}", "ERROR")
+            return False
+    
+    def test_free_order_with_stock(self) -> bool:
+        """Test Scenario 1: Free Order with Stock Available - Should be 'completed'"""
+        self.log("\n=== TEST 1: Free Order with Stock Available ===")
+        
+        try:
+            # Create order with product that has stock + 100% discount
+            order_data = {
+                "items": [
+                    {
+                        "productId": self.test_product_with_stock_id,
+                        "quantity": 1
+                    }
+                ],
+                "discountCode": self.test_discount_code,
+                "whatsAppNumber": "555123456",
+                "countryCode": "+966"
+            }
+            
+            response = self.make_request("POST", "/orders", order_data, self.user_token)
+            
+            if response.status_code == 201:
+                order = response.json()
+                order_id = order["id"]
+                
+                self.log(f"✅ Order created: {order_id[:8]}")
+                self.log(f"Order status: {order['status']}")
+                self.log(f"Order total: ${order['total']}")
+                self.log(f"Payment method: {order.get('paymentMethod', 'N/A')}")
+                
+                # Verify order details
+                if order["total"] == 0:
+                    self.log("✅ Order total is $0 (free order)")
+                else:
+                    self.log(f"❌ Expected free order, but total is ${order['total']}", "ERROR")
+                    return False
+                
+                if order["status"] == "completed":
+                    self.log("✅ Order status is 'completed' as expected")
+                else:
+                    self.log(f"❌ Expected 'completed' status, got '{order['status']}'", "ERROR")
+                    return False
+                
+                # Check if codes were delivered
+                if order["items"][0].get("deliveredCodes"):
+                    delivered_count = len(order["items"][0]["deliveredCodes"])
+                    self.log(f"✅ {delivered_count} codes delivered automatically")
+                else:
+                    self.log("❌ No codes were delivered for completed order", "ERROR")
+                    return False
+                
+                # Verify pending count is 0
+                pending_count = order["items"][0].get("pendingCount", 0)
+                if pending_count == 0:
+                    self.log("✅ No pending deliveries")
+                else:
+                    self.log(f"❌ Expected 0 pending, got {pending_count}", "ERROR")
+                    return False
+                    
+                return True
+            else:
+                self.log(f"❌ Failed to create order: {response.text}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Test 1 failed: {e}", "ERROR")
+            return False
+    
+    def test_free_order_no_stock(self) -> bool:
+        """Test Scenario 2: Free Order with Out-of-Stock Product - Should be 'pending_delivery'"""
+        self.log("\n=== TEST 2: Free Order with Out-of-Stock Product ===")
+        
+        try:
+            # Create order with product that has no stock + 100% discount
+            order_data = {
+                "items": [
+                    {
+                        "productId": self.test_product_no_stock_id,
+                        "quantity": 1
+                    }
+                ],
+                "discountCode": self.test_discount_code,
+                "whatsAppNumber": "555654321", 
+                "countryCode": "+966"
+            }
+            
+            response = self.make_request("POST", "/orders", order_data, self.user_token)
+            
+            if response.status_code == 201:
+                order = response.json()
+                order_id = order["id"]
+                
+                self.log(f"✅ Order created: {order_id[:8]}")
+                self.log(f"Order status: {order['status']}")
+                self.log(f"Order total: ${order['total']}")
+                self.log(f"Payment method: {order.get('paymentMethod', 'N/A')}")
+                
+                # Verify order details
+                if order["total"] == 0:
+                    self.log("✅ Order total is $0 (free order)")
+                else:
+                    self.log(f"❌ Expected free order, but total is ${order['total']}", "ERROR")
+                    return False
+                
+                # CRITICAL CHECK: Status should be 'pending_delivery' NOT 'completed'
+                if order["status"] == "pending_delivery":
+                    self.log("✅ Order status is 'pending_delivery' as expected")
+                else:
+                    self.log(f"❌ CRITICAL BUG: Expected 'pending_delivery' status, got '{order['status']}'", "ERROR")
+                    return False
+                
+                # Check pending count
+                pending_count = order["items"][0].get("pendingCount", 0)
+                if pending_count > 0:
+                    self.log(f"✅ {pending_count} codes pending delivery")
+                else:
+                    self.log(f"❌ Expected pending count > 0, got {pending_count}", "ERROR")
+                    return False
+                
+                # Check no codes were delivered
+                delivered_codes = order["items"][0].get("deliveredCodes", [])
+                if len(delivered_codes) == 0:
+                    self.log("✅ No codes delivered (as expected - out of stock)")
+                else:
+                    self.log(f"❌ Unexpected: {len(delivered_codes)} codes delivered despite no stock", "ERROR")
+                    return False
+                    
+                return True
+            else:
+                self.log(f"❌ Failed to create order: {response.text}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Test 2 failed: {e}", "ERROR")
+            return False
+    
+    def test_paid_order_no_stock(self) -> bool:
+        """Test Scenario 3: Paid Order with Out-of-Stock Product - Should be 'pending_delivery'"""
+        self.log("\n=== TEST 3: Paid Order with Out-of-Stock Product ===")
+        
+        try:
+            # Create order with product that has no stock, no discount (paid order)
+            order_data = {
+                "items": [
+                    {
+                        "productId": self.test_product_no_stock_id,
+                        "quantity": 1
+                    }
+                ],
+                "whatsAppNumber": "555789123",
+                "countryCode": "+966"
+            }
+            
+            response = self.make_request("POST", "/orders", order_data, self.user_token)
+            
+            if response.status_code == 201:
+                order = response.json()
+                order_id = order["id"]
+                
+                self.log(f"✅ Order created: {order_id[:8]}")
+                self.log(f"Order status: {order['status']}")
+                self.log(f"Order total: ${order['total']}")
+                self.log(f"Payment method: {order.get('paymentMethod', 'N/A')}")
+                
+                # Verify order details
+                if order["total"] > 0:
+                    self.log(f"✅ Order total is ${order['total']} (paid order)")
+                else:
+                    self.log(f"❌ Expected paid order, but total is ${order['total']}", "ERROR")
+                    return False
+                
+                # Status should be 'pending_delivery' due to no stock
+                if order["status"] == "pending_delivery":
+                    self.log("✅ Order status is 'pending_delivery' as expected")
+                else:
+                    self.log(f"❌ Expected 'pending_delivery' status, got '{order['status']}'", "ERROR")
+                    return False
+                
+                # Check pending count
+                pending_count = order["items"][0].get("pendingCount", 0)
+                if pending_count > 0:
+                    self.log(f"✅ {pending_count} codes pending delivery")
+                else:
+                    self.log(f"❌ Expected pending count > 0, got {pending_count}", "ERROR")
+                    return False
+                
+                return True
+            else:
+                self.log(f"❌ Failed to create order: {response.text}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Test 3 failed: {e}", "ERROR")
+            return False
+    
+    def test_mixed_order(self) -> bool:
+        """Test Scenario 4: Mixed Order (some stock, some out of stock) - Should be 'pending_delivery'"""
+        self.log("\n=== TEST 4: Mixed Order (Stock + No Stock) ===")
+        
+        try:
+            # Create order with both products: one with stock, one without
+            order_data = {
+                "items": [
+                    {
+                        "productId": self.test_product_with_stock_id,
+                        "quantity": 1  # This has stock
+                    },
+                    {
+                        "productId": self.test_product_no_stock_id,
+                        "quantity": 1  # This has no stock
+                    }
+                ],
+                "whatsAppNumber": "555456789",
+                "countryCode": "+966"
+            }
+            
+            response = self.make_request("POST", "/orders", order_data, self.user_token)
+            
+            if response.status_code == 201:
+                order = response.json()
+                order_id = order["id"]
+                
+                self.log(f"✅ Order created: {order_id[:8]}")
+                self.log(f"Order status: {order['status']}")
+                self.log(f"Order total: ${order['total']}")
+                
+                # Status should be 'pending_delivery' because at least one item has no stock
+                if order["status"] == "pending_delivery":
+                    self.log("✅ Order status is 'pending_delivery' as expected (mixed stock)")
+                else:
+                    self.log(f"❌ Expected 'pending_delivery' status, got '{order['status']}'", "ERROR")
+                    return False
+                
+                # Check each item
+                for i, item in enumerate(order["items"]):
+                    product_name = item["productName"]
+                    delivered_codes = item.get("deliveredCodes", [])
+                    pending_count = item.get("pendingCount", 0)
+                    
+                    self.log(f"Item {i+1}: {product_name}")
+                    self.log(f"  - Delivered codes: {len(delivered_codes)}")
+                    self.log(f"  - Pending count: {pending_count}")
+                    
+                    # First item (with stock) should have delivered codes
+                    if i == 0 and len(delivered_codes) > 0:
+                        self.log("  ✅ Product A has delivered codes")
+                    elif i == 0:
+                        self.log("  ❌ Product A should have delivered codes", "ERROR")
+                        return False
+                    
+                    # Second item (no stock) should have pending count
+                    if i == 1 and pending_count > 0:
+                        self.log("  ✅ Product B has pending count")
+                    elif i == 1:
+                        self.log("  ❌ Product B should have pending count", "ERROR")
+                        return False
+                
+                return True
+            else:
+                self.log(f"❌ Failed to create order: {response.text}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Test 4 failed: {e}", "ERROR")
+            return False
+    
+    def test_order_retrieval(self, order_id: str) -> bool:
+        """Test order retrieval endpoints"""
+        self.log(f"\n=== Testing Order Retrieval for {order_id[:8]} ===")
+        
+        try:
+            # Test GET /api/orders/{id}
+            response = self.make_request("GET", f"/orders/{order_id}", token=self.user_token)
+            
+            if response.status_code == 200:
+                order = response.json()
+                self.log("✅ Order retrieval successful")
+                self.log(f"Order status: {order['status']}")
+                
+                # Verify order structure
+                required_fields = ["id", "status", "items", "total", "createdAt"]
+                for field in required_fields:
+                    if field in order:
+                        self.log(f"✅ Field '{field}' present")
+                    else:
+                        self.log(f"❌ Missing field '{field}'", "ERROR")
+                        return False
+                
+                return True
+            else:
+                self.log(f"❌ Failed to retrieve order: {response.text}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Order retrieval test failed: {e}", "ERROR")
+            return False
+    
+    def run_all_tests(self) -> Dict[str, bool]:
+        """Run all test scenarios"""
+        self.log("🚀 Starting Backend Order Flow Tests")
+        self.log("=" * 50)
+        
+        results = {}
+        
+        # Setup phase
+        if not self.setup_admin_and_user():
+            self.log("❌ Setup failed, aborting tests", "ERROR")
+            return {"setup": False}
+        
+        if not self.create_test_data():
+            self.log("❌ Test data creation failed, aborting tests", "ERROR")  
+            return {"setup": True, "test_data": False}
+        
+        # Run test scenarios
+        results["setup"] = True
+        results["test_data"] = True
+        results["test_1_free_with_stock"] = self.test_free_order_with_stock()
+        results["test_2_free_no_stock"] = self.test_free_order_no_stock()
+        results["test_3_paid_no_stock"] = self.test_paid_order_no_stock()
+        results["test_4_mixed_order"] = self.test_mixed_order()
+        
+        # Summary
+        self.log("\n" + "=" * 50)
+        self.log("🏁 TEST RESULTS SUMMARY")
+        self.log("=" * 50)
+        
+        passed = sum(1 for result in results.values() if result)
+        total = len(results)
+        
+        for test_name, result in results.items():
+            status = "✅ PASSED" if result else "❌ FAILED"
+            self.log(f"{test_name}: {status}")
+        
+        self.log(f"\nOverall: {passed}/{total} tests passed")
+        
+        if results.get("test_2_free_no_stock", False):
+            self.log("\n✅ CRITICAL: Free orders with out-of-stock products correctly show 'pending_delivery'")
+        else:
+            self.log("\n❌ CRITICAL: Bug found in free order status logic!")
+        
+        return results
 
 if __name__ == "__main__":
-    main()
+    tester = BackendTester()
+    results = tester.run_all_tests()
+    
+    # Exit with appropriate code
+    all_passed = all(results.values())
+    exit(0 if all_passed else 1)
