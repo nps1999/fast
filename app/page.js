@@ -834,6 +834,77 @@ export default function App() {
     </div>);
   };
 
+  const PaymentFailedPage = () => {
+    return (<div className="min-h-[60vh] flex items-center justify-center animate-fade-in">
+      <Card className="bg-[#12121f] border-red-500/20 w-full max-w-md p-8 text-center">
+        <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6">
+          <X className="w-10 h-10 text-red-400" />
+        </div>
+        <h1 className="text-2xl font-bold text-red-400 mb-4">فشلت عملية الدفع</h1>
+        <p className="text-gray-400 mb-6 leading-relaxed">
+          عذراً، لم تتم عملية الدفع بنجاح. لم يتم خصم أي مبلغ من حسابك ولم يتم تسليم المنتجات.
+        </p>
+        <div className="bg-red-500/10 rounded-lg p-4 mb-6 text-sm text-red-300">
+          <p className="flex items-center gap-2 justify-center">
+            <AlertCircle className="w-4 h-4" />
+            لم يتم استلام أي منتجات
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Button 
+            className="w-full bg-purple-600 hover:bg-purple-500" 
+            onClick={() => navigate('home')}
+          >
+            <Home className="w-4 h-4 ml-2" />
+            العودة للصفحة الرئيسية
+          </Button>
+          <Button 
+            variant="outline" 
+            className="w-full border-purple-500/20 hover:bg-purple-500/10" 
+            onClick={() => navigate('cart')}
+          >
+            <ShoppingCart className="w-4 h-4 ml-2" />
+            العودة للسلة
+          </Button>
+        </div>
+        <p className="text-xs text-gray-500 mt-6">
+          إذا واجهتك مشكلة، يرجى التواصل مع الدعم الفني
+        </p>
+      </Card>
+    </div>);
+  };
+
+  const PaymentCancelledPage = () => {
+    return (<div className="min-h-[60vh] flex items-center justify-center animate-fade-in">
+      <Card className="bg-[#12121f] border-orange-500/20 w-full max-w-md p-8 text-center">
+        <div className="w-20 h-20 rounded-full bg-orange-500/10 flex items-center justify-center mx-auto mb-6">
+          <XCircle className="w-10 h-10 text-orange-400" />
+        </div>
+        <h1 className="text-2xl font-bold text-orange-400 mb-4">تم إلغاء عملية الدفع</h1>
+        <p className="text-gray-400 mb-6 leading-relaxed">
+          لقد قمت بإلغاء عملية الدفع. لم يتم خصم أي مبلغ ولم يتم تسليم المنتجات.
+        </p>
+        <div className="space-y-2">
+          <Button 
+            className="w-full bg-purple-600 hover:bg-purple-500" 
+            onClick={() => navigate('cart')}
+          >
+            <ShoppingCart className="w-4 h-4 ml-2" />
+            العودة للسلة
+          </Button>
+          <Button 
+            variant="outline" 
+            className="w-full border-purple-500/20 hover:bg-purple-500/10" 
+            onClick={() => navigate('home')}
+          >
+            <Home className="w-4 h-4 ml-2" />
+            الصفحة الرئيسية
+          </Button>
+        </div>
+      </Card>
+    </div>);
+  };
+
   const ProfilePage = () => {
     const [name, setName] = useState(user?.name||''); const [email, setEmail] = useState(user?.email||'');
     const [phone, setPhone] = useState(user?.phone||''); const [cc, setCC] = useState(user?.countryCode||'+966');
