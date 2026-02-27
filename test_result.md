@@ -454,6 +454,21 @@ backend:
           agent: "testing"
           comment: "Security working - input validation properly rejects incomplete data, wrong credentials, empty carts. Admin access control enforced."
 
+  - task: "UPDATED Review System - Multiple Reviews per Product (One per Order)"
+    implemented: true
+    working: true
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "UPDATED REVIEW SYSTEM: Review schema now includes orderId field. Users can review the same product multiple times - once per order/purchase. Duplicate check is now: { productId, userId, orderId } instead of just { productId, userId }. Key changes: 1) orderId field required in review submission, 2) Validation ensures user purchased product in specified order, 3) Order must be completed/delivered, 4) Filtering supports orderId parameter, 5) Multiple reviews per product allowed across different orders."
+        - working: true
+          agent: "testing"
+          comment: "UPDATED REVIEW SYSTEM TESTING COMPLETE ✅ Comprehensive testing confirms all new functionality works perfectly: 1) ✅ MULTIPLE REVIEWS PER PRODUCT: Users can review same product multiple times in different orders - tested with 5 successful reviews across 4 orders, 2) ✅ orderId VALIDATION: Field required and properly stored in database, 3) ✅ DUPLICATE PREVENTION: Works per order (not globally) - duplicate review in same order correctly rejected, 4) ✅ ORDER VALIDATION: Only completed/delivered orders can be reviewed, product must exist in specified order, 5) ✅ FILTERING BY ORDER: GET /api/reviews?orderId=xxx works correctly, 6) ✅ CROSS-ORDER REVIEWS: Same product can be reviewed in different orders successfully, 7) ✅ MULTI-PRODUCT ORDERS: Each product in order can be reviewed separately. Success Rate: 100% (9/9 tests passed). The updated review system perfectly implements the new business requirement allowing multiple reviews per product (one per order) while maintaining proper validation and security."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
