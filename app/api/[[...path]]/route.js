@@ -874,10 +874,11 @@ async function handlePayPal(pathParts, method, request, db) {
     if (!order) return res({ error: 'الطلب غير موجود' }, 404);
     if (order.status !== 'pending') return res({ error: 'الطلب تم معالجته بالفعل' }, 400);
     
-    // Get exchange rates
-    const rates = await getExchangeRates();
-    const exchangeRate = rates[currency] || 1;
-    const convertedAmount = (order.total * exchangeRate).toFixed(2);
+    // IMPORTANT: Always send USD amount to PayPal
+    // The order.total is already in USD (original product price)
+    // We ignore the currency parameter from frontend
+    const paypalAmount = order.total.toFixed(2);
+    const paypalCurrency = 'USD'; // Always USD for PayPal
     
     try {
       const paypalClientId = process.env.PAYPAL_CLIENT_ID;
