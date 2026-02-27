@@ -332,15 +332,18 @@ backend:
 
   - task: "User Profile Management API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/app/api/[[...path]]/route.js"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "NEW FEATURE: PUT /api/auth/profile allows users to update name and email. GET /api/auth/profile returns user profile data. Needs testing."
+        - working: true
+          agent: "testing"
+          comment: "User profile management working correctly: GET user profile accessible via /api/auth/session endpoint, PUT /api/auth/profile successfully updates user name, phone, countryCode, and email with proper uniqueness validation. Authentication properly enforced. Note: Profile GET uses session endpoint, not separate profile endpoint."
 
   - task: "WhatsApp Number Collection at Checkout"
     implemented: true
