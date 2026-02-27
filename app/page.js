@@ -475,29 +475,46 @@ export default function App() {
     const [phoneCode, setPhoneCode] = useState('+966'); const [phoneNum, setPhoneNum] = useState('');
     const validateD = async () => { try { const d = await api('/discounts/validate',{method:'POST',body:JSON.stringify({code:dc})}); setDI(d); toast.success('تم تطبيق الكود'); } catch(e) { toast.error(e.message); setDI(null); } };
     let da = 0; if (di) da = di.type === 'percentage' ? cartTotal*(di.value/100) : Math.min(di.value,cartTotal);
-    const ft = cartTotal - da;
+    const ft = Math.max(0, cartTotal - da); // Final total, ensure not negative
+    const isFreeOrder = ft === 0 || ft < 0.01; // Check if order is free
+    
     const placeOrder = async () => {
       if (!phoneNum.trim()) { toast.error('يرجى إدخال رقم الواتساب'); return; }
       setProc(true);
       try {
         const items = cart.map(i => ({productId:i.productId,quantity:i.quantity}));
-        const order = await api('/orders',{method:'POST',body:JSON.stringify({items,discountCode:di?dc:undefined,whatsAppNumber:phoneNum,countryCode:phoneCode})},token);
+        const order = await api('/orders',{method:'POST',body:JSON.stringify({items,discountCode:di?dc:undefined,whatsAppNumber:phoneNum,countryCode:phoneCode,isFree:isFreeOrder})},token);
         
-        try {
-          const paypalData = await api('/paypal/create-order',{method:'POST',body:JSON.stringify({orderId:order.id, currency})},token);
-          if (paypalData.approveUrl) {
-            window.location.href = paypalData.approveUrl;
-          } else {
-            toast.error('فشل إنشاء طلب PayPal');
-            setProc(false);
-          }
-        } catch(paypalErr) {
-          if (paypalErr.message.includes('PayPal غير مكون')) {
-            toast.error('PayPal غير مكون. يرجى التواصل مع الإدارة.');
-          } else {
-            toast.error('خطأ في PayPal: ' + paypalErr.message);
+        if (isFreeOrder) {
+          // Free order - complete immediately without PayPal
+          try {
+            await api(`/orders/${order.id}`,{method:'PUT',body:JSON.stringify({status:'completed'})},token);
+            setCart([]); 
+            localStorage.removeItem('cart'); 
+            toast.success('🎉 تم إتمام الطلب المجاني بنجاح!'); 
+            navigate('order',order.id);
+          } catch(e) {
+            toast.error('خطأ في إتمام الطلب: ' + e.message);
           }
           setProc(false);
+        } else {
+          // Paid order - redirect to PayPal
+          try {
+            const paypalData = await api('/paypal/create-order',{method:'POST',body:JSON.stringify({orderId:order.id, currency})},token);
+            if (paypalData.approveUrl) {
+              window.location.href = paypalData.approveUrl;
+            } else {
+              toast.error('فشل إنشاء طلب PayPal');
+              setProc(false);
+            }
+          } catch(paypalErr) {
+            if (paypalErr.message.includes('PayPal غير مكون')) {
+              toast.error('PayPal غير مكون. يرجى التواصل مع الإدارة.');
+            } else {
+              toast.error('خطأ في PayPal: ' + paypalErr.message);
+            }
+            setProc(false);
+          }
         }
       } catch(e) { toast.error(e.message); setProc(false); }
     };
