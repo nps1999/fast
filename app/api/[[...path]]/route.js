@@ -585,6 +585,9 @@ async function handleOrders(path, method, request, db) {
     const settings = await db.collection('settings').findOne({ id: 'main' });
     await sendMail(user.email, `تأكيد الطلب #${orderId.slice(0, 8)} - ${settings?.siteName || 'FAST STORE'}`, orderEmailHtml(order, settings));
 
+    // Send Discord notification
+    await sendDiscordNotification(order);
+
     return res(order, 201);
   }
 
