@@ -28,7 +28,59 @@
 ##         -agent: "main"  # or "testing" or "user"
 ##         -comment: "Detailed comment about status"
 ##
-## frontend:
+##   - task: "Search functionality (input loses focus bug)"
+    implemented: true
+    working: true
+    file: "/app/app/page.js"
+    stuck_count: 3
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "user"
+          comment: "User reported search input loses focus and page refreshes on every keystroke. Attempted multiple fixes with controlled/uncontrolled components."
+        - working: false
+          agent: "main"
+          comment: "Attempted fix with controlled component (useState) - caused re-render issue"
+        - working: false
+          agent: "main"
+          comment: "Attempted fix with uncontrolled component (useRef) - did not solve re-render problem"
+        - working: false
+          agent: "main"
+          comment: "Attempted fix with form onSubmit - ineffective"
+        - working: "NA"
+          agent: "main"
+          comment: "ROOT CAUSE IDENTIFIED: searchQuery state update triggers re-render of entire monolithic App component. SOLUTION: Created isolated SearchBar component that manages its own state internally, preventing main page re-render. Component only calls parent's onSearch when Enter is pressed."
+
+  - task: "Search results display under slider"
+    implemented: true
+    working: "NA"
+    file: "/app/app/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "NEW FEATURE: Search results now display in a dedicated section directly under the hero slider. Shows filtered products or 'no results' message. Integrated with new SearchBar component."
+
+  - task: "Admin order view - out-of-stock orders show wrong status"
+    implemented: true
+    working: "NA"
+    file: "/app/app/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "user"
+          comment: "User reported: Orders placed for products with zero stock show as 'Completed' instead of 'Pending Delivery' in admin panel"
+        - working: "NA"
+          agent: "main"
+          comment: "ROOT CAUSE IDENTIFIED: Backend correctly sets status to 'pending_delivery' for out-of-stock orders. However, frontend CheckoutPage was forcing free orders (100% discount) to 'completed' status regardless of stock. FIXED: Updated free order logic to respect backend status - if order is 'pending_delivery' (no stock), it stays that way even for free orders."
+
+frontend:
+
 ##   - task: "Task name"
 ##     implemented: true
 ##     working: true  # or false or "NA"
