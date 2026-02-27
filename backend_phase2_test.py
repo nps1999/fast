@@ -602,9 +602,9 @@ class Phase2BackendTest:
         success = True
 
         # Get user email for testing
-        response = self.make_request("GET", "/auth/profile", token=self.user_token)
+        response = self.make_request("GET", "/auth/session", token=self.user_token)
         if not response or response.status_code != 200:
-            self.log_result("Password Reset Setup", False, "Could not get user profile")
+            self.log_result("Password Reset Setup", False, "Could not get user session")
             return False
             
         user_email = response.json().get('user', {}).get('email')
