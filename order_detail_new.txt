@@ -1,0 +1,114 @@
+  const OrderDetail = () => {
+    const [order, setOrder] = useState(null); 
+    const [oL, setOL] = useState(true);
+    const [reviewStates, setReviewStates] = useState({}); 
+    const [existingReviews, setExistingReviews] = useState({});
+    
+    useEffect(() => {
+      if (pageId && user) {
+        api(`/orders/${pageId}`,{},token).then(order => {
+          setOrder(order);
+          if (order.items) {
+            order.items.forEach(item => {
+              api(`/reviews?productId=${item.productId}&userId=${user.id}`,{},token)
+                .then(reviews => {
+                  if (reviews.length > 0) {
+                    setExistingReviews(prev => ({...prev, [item.productId]: true}));
+                  }
+                })
+                .catch(() => {});
+            });
+          }
+        }).catch(()=>{}).finally(() => setOL(false));
+      }
+    }, [pageId, user]);
+    
+    const submitReview = async (productId) => {
+      if (!user) { toast.error('يجب تسجيل الدخول'); return; }
+      const state = reviewStates[productId];
+      if (!state || !state.rating) { toast.error('يرجى اختيار التقييم'); return; }
+      
+      setReviewStates(prev => ({...prev, [productId]: {...state, submitting: true}}));
+      try {
+        await api('/reviews',{method:'POST',body:JSON.stringify({productId, rating:state.rating, comment:state.comment||''})},token);
+        toast.success('تم إرسال التقييم - سيظهر بعد موافقة الإدارة');
+        setExistingReviews(prev => ({...prev, [productId]: true}));
+        setReviewStates(prev => ({...prev, [productId]: {rating: 5, comment: '', submitting: false}}));
+      } catch(e) {
+        toast.error(e.message);
+        setReviewStates(prev => ({...prev, [productId]: {...state, submitting: false}}));
+      }
+    };
+    
+    const updateReviewState = (productId, field, value) => {
+      setReviewStates(prev => ({
+        ...prev,
+        [productId]: {...(prev[productId] || {rating: 5, comment: ''}), [field]: value}
+      }));
+    };
+    
+    if (oL) return <div className="text-center py-16"><Loader2 className="w-8 h-8 animate-spin text-purple-400 mx-auto" /></div>;
+    if (!order) return <div className="text-center py-16 text-gray-500">الطلب غير موجود</div>;
+    
+    const canReview = order.status === 'delivered' || order.status === 'completed';
+    
+    return (<div className="animate-fade-in max-w-3xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">تفاصيل الطلب #{order.id?.slice(0,8)}</h1>
+      <Card className="bg-[#12121f] border-purple-500/10 p-6 mb-6"><div className="grid grid-cols-2 gap-4">
+        <div><span className="text-gray-400 text-sm">الحالة</span><div className="mt-1"><Badge className={order.status==='completed'?'bg-green-500/20 text-green-400':order.status==='pending_delivery'?'bg-orange-500/20 text-orange-400':'bg-blue-500/20 text-blue-400'}>{order.status==='completed'?'مكتمل':order.status==='pending_delivery'?'بانتظار التسليم':'تم التسليم'}</Badge></div></div>
+        <div><span className="text-gray-400 text-sm">التاريخ</span><p>{new Date(order.createdAt).toLocaleString('ar')}</p></div>
+        <div><span className="text-gray-400 text-sm">الإجمالي</span><p className="text-2xl font-bold text-purple-400">{formatPrice(order.total)}</p></div>
+      </div></Card>
+      <div className="space-y-4">{order.items?.map((item, idx) => <Card key={idx} className="bg-[#12121f] border-purple-500/10 p-6">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">{item.productImage ? <img src={item.productImage} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-purple-900/30 flex items-center justify-center"><Gamepad2 className="w-6 h-6 text-purple-500/50" /></div>}</div>
+          <div className="flex-1"><h3 className="font-bold">{item.productName}</h3><p className="text-sm text-gray-400">{formatPrice(item.price)} x {item.quantity}</p></div>
+        </div>
+        {item.deliveredCodes?.length > 0 && <div className="bg-[#0a0a15] rounded-lg p-4 mb-3"><h4 className="text-sm font-bold text-green-400 mb-2 flex items-center gap-1"><Key className="w-4 h-4" /> الأكواد المسلمة:</h4>
+          {item.deliveredCodes.map((c, ci) => <div key={ci} className="flex items-center justify-between py-1 border-b border-gray-800 last:border-0"><code className="text-cyan-400 font-mono text-sm">{c}</code><Button size="sm" variant="ghost" className="text-gray-400 hover:text-purple-400 h-7" onClick={() => {navigator.clipboard.writeText(c);toast.success('تم نسخ الكود');}}><Copy className="w-3 h-3" /></Button></div>)}
+        </div>}
+        {item.pendingCount > 0 && <div className="bg-orange-500/10 rounded-lg p-3 text-orange-400 text-sm flex items-center gap-2 mb-3"><Clock className="w-4 h-4" />{item.pendingCount} كود بانتظار التسليم</div>}
+        
+        {canReview && !existingReviews[item.productId] && (
+          <div className="bg-[#0a0a15] rounded-lg p-4 border border-purple-500/20 mt-3">
+            <h4 className="font-bold text-purple-400 mb-3 flex items-center gap-2"><Star className="w-4 h-4" /> قيّم هذا المنتج</h4>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm mb-2 block">التقييم</Label>
+                <StarRating
+                  rating={reviewStates[item.productId]?.rating || 5}
+                  onRate={(r) => updateReviewState(item.productId, 'rating', r)}
+                  size="md"
+                />
+              </div>
+              <div>
+                <Label className="text-sm mb-2 block">تعليقك (اختياري)</Label>
+                <Textarea
+                  value={reviewStates[item.productId]?.comment || ''}
+                  onChange={(e) => updateReviewState(item.productId, 'comment', e.target.value)}
+                  placeholder="شاركنا تجربتك مع هذا المنتج..."
+                  className="bg-[#12121f] border-purple-500/20 text-sm"
+                  rows={3}
+                />
+              </div>
+              <Button
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-500 w-full"
+                onClick={() => submitReview(item.productId)}
+                disabled={reviewStates[item.productId]?.submitting}
+              >
+                {reviewStates[item.productId]?.submitting ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : <Send className="w-4 h-4 ml-1" />}
+                إرسال التقييم
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {canReview && existingReviews[item.productId] && (
+          <div className="bg-green-500/10 rounded-lg p-3 text-green-400 text-sm flex items-center gap-2 mt-3">
+            <CheckCircle className="w-4 h-4" /> تم تقييم هذا المنتج
+          </div>
+        )}
+      </Card>)}</div>
+    </div>);
+  };
