@@ -347,15 +347,18 @@ backend:
 
   - task: "WhatsApp Number Collection at Checkout"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/app/api/[[...path]]/route.js"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "NEW FEATURE: Orders now accept whatsAppNumber and countryCode fields. Stored in order document for admin to contact customer. Visible in admin order view with direct WhatsApp chat link."
+        - working: true
+          agent: "testing"
+          comment: "WhatsApp data collection working perfectly: POST /api/orders accepts phone and countryCode fields, data is properly stored in order documents, GET /api/orders/{id} returns WhatsApp information correctly. Both user and admin can access the WhatsApp contact information in order details."
 
   - task: "Security (rate limiting, headers, input validation)"
     implemented: true
