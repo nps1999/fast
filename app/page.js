@@ -23,10 +23,10 @@ import {
 } from 'lucide-react';
 
 const CURRENCIES = {
-  USD: { symbol: '$', name: 'دولار أمريكي', flag: '🇺🇸' }, SAR: { symbol: 'ر.س', name: 'ريال سعودي', flag: '🇸🇦' },
-  KWD: { symbol: 'د.ك', name: 'دينار كويتي', flag: '🇰🇼' }, AED: { symbol: 'د.إ', name: 'درهم إماراتي', flag: '🇦🇪' },
-  BHD: { symbol: 'د.ب', name: 'دينار بحريني', flag: '🇧🇭' }, QAR: { symbol: 'ر.ق', name: 'ريال قطري', flag: '🇶🇦' },
-  OMR: { symbol: 'ر.ع', name: 'ريال عماني', flag: '🇴🇲' },
+  USD: { symbol: '$', name: 'دولار أمريكي', flagCode: 'us' }, SAR: { symbol: 'ر.س', name: 'ريال سعودي', flagCode: 'sa' },
+  KWD: { symbol: 'د.ك', name: 'دينار كويتي', flagCode: 'kw' }, AED: { symbol: 'د.إ', name: 'درهم إماراتي', flagCode: 'ae' },
+  BHD: { symbol: 'د.ب', name: 'دينار بحريني', flagCode: 'bh' }, QAR: { symbol: 'ر.ق', name: 'ريال قطري', flagCode: 'qa' },
+  OMR: { symbol: 'ر.ع', name: 'ريال عماني', flagCode: 'om' },
 };
 
 const COUNTRY_CODES = [
