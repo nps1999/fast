@@ -654,8 +654,11 @@ class Phase2BackendTest:
         
         # Setup authentication first
         if not self.setup_authentication():
-            print("❌ Authentication setup failed. Cannot proceed with tests.")
+            print("❌ Authentication setup failed for user. Cannot proceed with tests.")
             return False
+            
+        if not self.admin_token:
+            print("⚠️  Admin authentication not available. Admin-only tests will be skipped.")
         
         success = True
         success &= self.test_review_approval_system()
