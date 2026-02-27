@@ -543,25 +543,41 @@ export default function App() {
         <div className="flex gap-2"><Input placeholder="أدخل كود الخصم" value={dc} onChange={e => setDC(e.target.value)} className="bg-[#0a0a15] border-purple-500/20" /><Button className="bg-purple-600 hover:bg-purple-500" onClick={validateD}>تطبيق</Button></div>
         {di && <Badge className="mt-2 bg-green-500/20 text-green-400 border-green-500/30">خصم {di.type==='percentage'?`${di.value}%`:formatPrice(di.value)} مطبق</Badge>}
       </Card>
-      <Card className="bg-[#12121f] border-purple-500/10 p-6 mb-6">
-        <h2 className="font-bold mb-3 flex items-center gap-2"><DollarSign className="w-5 h-5 text-purple-400" /> طريقة الدفع</h2>
-        <div className="p-4 rounded-lg border-2 border-purple-500 bg-purple-500/10">
+      {isFreeOrder && (
+        <Card className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500/30 p-6 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center">
-              <svg className="w-8 h-8" viewBox="0 0 24 24">
-                <path fill="#003087" d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 2.658A.641.641 0 0 1 5.577 2h8.326c3.338 0 5.461 2.028 5.461 5.207 0 4.141-2.898 6.794-7.088 6.794h-1.783l-1.082 5.596a.641.641 0 0 1-.633.54z"/>
-              </svg>
+            <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-green-400" />
             </div>
-            <div className="flex-1">
-              <div className="font-semibold text-lg">الدفع عبر PayPal</div>
-              <div className="text-sm text-gray-400 mt-1">ادفع بأمان باستخدام PayPal - جميع المعاملات محمية ومشفرة</div>
+            <div>
+              <h3 className="font-bold text-green-400 text-lg">طلب مجاني! 🎉</h3>
+              <p className="text-sm text-green-300/80">تم تطبيق خصم 100% - لا حاجة للدفع، سيتم تسليم الطلب مباشرة</p>
             </div>
-            <Check className="w-6 h-6 text-green-400" />
           </div>
-        </div>
-      </Card>
-      <Button size="lg" className="w-full bg-purple-600 hover:bg-purple-500 text-lg py-6 neon-glow" onClick={placeOrder} disabled={proc}>
-        {proc ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : <DollarSign className="w-5 h-5 ml-2" />}{proc ? 'جاري التوجيه إلى PayPal...' : 'الدفع عبر PayPal'}
+        </Card>
+      )}
+      {!isFreeOrder && (
+        <Card className="bg-[#12121f] border-purple-500/10 p-6 mb-6">
+          <h2 className="font-bold mb-3 flex items-center gap-2"><DollarSign className="w-5 h-5 text-purple-400" /> طريقة الدفع</h2>
+          <div className="p-4 rounded-lg border-2 border-purple-500 bg-purple-500/10">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center">
+                <svg className="w-8 h-8" viewBox="0 0 24 24">
+                  <path fill="#003087" d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 2.658A.641.641 0 0 1 5.577 2h8.326c3.338 0 5.461 2.028 5.461 5.207 0 4.141-2.898 6.794-7.088 6.794h-1.783l-1.082 5.596a.641.641 0 0 1-.633.54z"/>
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="font-semibold text-lg">الدفع عبر PayPal</div>
+                <div className="text-sm text-gray-400 mt-1">ادفع بأمان باستخدام PayPal - جميع المعاملات محمية ومشفرة</div>
+              </div>
+              <Check className="w-6 h-6 text-green-400" />
+            </div>
+          </div>
+        </Card>
+      )}
+      <Button size="lg" className={`w-full text-lg py-6 neon-glow ${isFreeOrder ? 'bg-green-600 hover:bg-green-500' : 'bg-purple-600 hover:bg-purple-500'}`} onClick={placeOrder} disabled={proc}>
+        {proc ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : (isFreeOrder ? <CheckCircle className="w-5 h-5 ml-2" /> : <DollarSign className="w-5 h-5 ml-2" />)}
+        {proc ? (isFreeOrder ? 'جاري إتمام الطلب المجاني...' : 'جاري التوجيه إلى PayPal...') : (isFreeOrder ? '✨ إتمام الطلب المجاني' : 'الدفع عبر PayPal')}
       </Button>
     </div>);
   };
