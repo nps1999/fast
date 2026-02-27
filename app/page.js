@@ -190,7 +190,7 @@ function ProductCard({ product, onView, onAddToCart, formatPrice }) {
         {product.image ? <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
         : <div className="w-full h-full bg-gradient-to-br from-purple-900/40 to-cyan-900/40 flex items-center justify-center"><Gamepad2 className="w-12 h-12 text-purple-400/50" /></div>}
         {product.discount > 0 && <Badge className="absolute top-3 left-3 bg-red-500/90 text-white border-0 animate-pulse">خصم {product.discount}%</Badge>}
-        {product.stock === 0 && <Badge className="absolute top-3 right-3 bg-orange-500/90 text-white border-0">نفذت الكمية</Badge>}
+        {/* Stock badge removed - orders can be placed even when stock is 0 */}
       </div>
       <CardContent className="p-4">
         <h3 className="font-bold text-lg mb-2 text-white group-hover:text-purple-400 transition-colors line-clamp-1">{product.name}</h3>
