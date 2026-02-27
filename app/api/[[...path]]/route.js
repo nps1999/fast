@@ -527,24 +527,35 @@ async function handleOrders(path, method, request, db) {
     const orderId = uuidv4();
     let subtotal = 0;
     const orderItems = [];
-    let hasPending = false;
 
+    // 🔒 SECURITY: Do NOT deliver codes here - only calculate what will be delivered
     for (const item of body.items) {
       const product = await db.collection('products').findOne({ id: item.productId, active: true });
       if (!product) continue;
+      
       let price = product.discount > 0 ? Math.round(product.price * (1 - product.discount / 100) * 100) / 100 : product.price;
-      const deliveredCodes = [];
       const qty = item.quantity || 1;
-      for (let i = 0; i < qty; i++) {
-        const code = await db.collection('codes').findOneAndUpdate(
-          { productId: item.productId, status: 'available' },
-          { $set: { status: 'sold', orderId, soldAt: new Date() } }
-        );
-        if (code) deliveredCodes.push(code.code);
-      }
-      const pendingCount = qty - deliveredCodes.length;
-      if (pendingCount > 0) hasPending = true;
-      orderItems.push({ productId: product.id, productName: product.name, productImage: product.image, price, quantity: qty, deliveredCodes, pendingCount });
+      
+      // Check available stock (but don't reserve it yet!)
+      const availableCount = await db.collection('codes').countDocuments({ 
+        productId: item.productId, 
+        status: 'available' 
+      });
+      
+      const willDeliver = Math.min(qty, availableCount);
+      const pendingCount = qty - willDeliver;
+      
+      orderItems.push({ 
+        productId: product.id, 
+        productName: product.name, 
+        productImage: product.image, 
+        price, 
+        quantity: qty, 
+        availableStock: willDeliver,
+        pendingCount,
+        deliveredCodes: [], // Empty - codes will be delivered after payment!
+      });
+      
       subtotal += price * qty;
     }
 
@@ -565,29 +576,32 @@ async function handleOrders(path, method, request, db) {
     const total = Math.round((subtotal - discountAmount) * 100) / 100;
     const isFreeOrder = total <= 0;
     
-    // Status logic: if any item has pending codes, status is pending_delivery
-    // Otherwise, order is completed (whether free or paid)
-    const finalStatus = hasPending ? 'pending_delivery' : 'completed';
-    
+    // 🔒 SECURITY: Order starts as 'pending_payment' (no codes delivered yet!)
+    // Codes will be delivered ONLY after successful payment capture
     const order = {
-      id: orderId, userId: user.id, userEmail: user.email, userName: user.name,
+      id: orderId, 
+      userId: user.id, 
+      userEmail: user.email, 
+      userName: user.name,
       phone: body.phone || body.whatsAppNumber || '', 
       whatsAppNumber: body.whatsAppNumber || body.phone || '',
       countryCode: body.countryCode || '',
-      items: orderItems, subtotal, discountCode: appliedDiscount, discountAmount, total: Math.max(0, total),
-      status: finalStatus,
-      paymentMethod: isFreeOrder ? 'free' : 'direct', 
+      items: orderItems, 
+      subtotal, 
+      discountCode: appliedDiscount, 
+      discountAmount, 
+      total: Math.max(0, total),
+      status: isFreeOrder ? 'pending' : 'pending_payment', // Waiting for payment
+      paymentMethod: null, // Will be set after payment
       createdAt: new Date()
     };
+    
     await db.collection('orders').insertOne(order);
 
-    // Send confirmation email
-    const settings = await db.collection('settings').findOne({ id: 'main' });
-    await sendMail(user.email, `تأكيد الطلب #${orderId.slice(0, 8)} - ${settings?.siteName || 'FAST STORE'}`, orderEmailHtml(order, settings));
+    console.log(`[Order Created] 🆕 OrderID: ${orderId.slice(0,8)}, Total: $${total}, Status: ${order.status}`);
 
-    // Send Discord notification
-    await sendDiscordNotification(order);
-
+    // Do NOT send email or Discord notification yet - wait for payment!
+    
     return res(order, 201);
   }
 
