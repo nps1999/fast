@@ -796,13 +796,37 @@ export default function App() {
 
         {/* Orders */}
         {tab==='orders'&&<div className="animate-fade-in"><h2 className="text-2xl font-bold mb-6">الطلبات</h2><div className="space-y-2">{allOrders.map(o => <Card key={o.id} className="bg-[#12121f] border-purple-500/10 p-4">
-          <div className="flex items-center justify-between mb-2 flex-wrap gap-2"><div className="flex items-center gap-3 flex-wrap"><span className="text-sm text-gray-400">#{o.id?.slice(0,8)}</span><span>{o.userName}</span><span className="text-xs text-gray-500">{o.userEmail}</span>
-            {o.phone && <a href={`https://wa.me/${o.countryCode?.replace('+','')}${o.phone}`} target="_blank" rel="noreferrer" className="text-green-400 text-xs flex items-center gap-1 bg-green-500/10 px-2 py-1 rounded"><MessageCircle className="w-3 h-3" />{o.countryCode}{o.phone}</a>}
-          </div><div className="flex items-center gap-3"><Badge className={o.status==='completed'?'bg-green-500/20 text-green-400':o.status==='pending_delivery'?'bg-orange-500/20 text-orange-400':'bg-blue-500/20 text-blue-400'}>{o.status==='completed'?'مكتمل':o.status==='pending_delivery'?'بانتظار التسليم':'تم التسليم'}</Badge><span className="font-bold text-purple-400">${o.total?.toFixed(2)}</span></div></div>
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm text-gray-400">#{o.id?.slice(0,8)}</span>
+              <span>{o.userName}</span>
+              <span className="text-xs text-gray-500">{o.userEmail}</span>
+              {(o.whatsAppNumber || o.phone) && (
+                <a 
+                  href={`https://wa.me/${(o.countryCode||'').replace('+','')}${o.whatsAppNumber||o.phone}`} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="flex items-center gap-1.5 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-3 py-1.5 rounded-lg transition-all"
+                >
+                  <MessageCircle className="w-4 h-4 text-green-400" />
+                  <span className="text-green-400 font-medium text-sm">{o.countryCode} {o.whatsAppNumber||o.phone}</span>
+                  <span className="text-xs text-green-300/70">واتساب</span>
+                </a>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge className={o.status==='completed'?'bg-green-500/20 text-green-400':o.status==='pending_delivery'?'bg-orange-500/20 text-orange-400':'bg-blue-500/20 text-blue-400'}>
+                {o.status==='completed'?'مكتمل':o.status==='pending_delivery'?'بانتظار التسليم':'تم التسليم'}
+              </Badge>
+              <span className="font-bold text-purple-400">${o.total?.toFixed(2)}</span>
+            </div>
+          </div>
           <div className="text-sm text-gray-400 mb-2">{o.items?.map(i => `${i.productName} (${i.quantity})`).join(' | ')}</div>
-          <div className="flex items-center justify-between"><span className="text-xs text-gray-500">{new Date(o.createdAt).toLocaleString('ar')}</span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500">{new Date(o.createdAt).toLocaleString('ar')}</span>
             {o.status==='pending_delivery'&&<div className="flex gap-2 flex-wrap">{o.items?.map((item,idx) => item.pendingCount>0&&<Button key={idx} size="sm" className="bg-orange-600 hover:bg-orange-500" onClick={() => {setDelOrder(o);setDelIdx(idx);setDelCodes('');setShowDeliver(true);}}><Truck className="w-3 h-3 ml-1" /> تسليم {item.productName}</Button>)}</div>}
-          </div></Card>)}</div></div>}
+          </div>
+        </Card>)}</div></div>}
 
         {/* Users */}
         {tab==='users'&&<div className="animate-fade-in"><h2 className="text-2xl font-bold mb-6">المستخدمين</h2><div className="space-y-2">{allUsers.map(u => <Card key={u.id} className="bg-[#12121f] border-purple-500/10 p-4 flex items-center justify-between">
