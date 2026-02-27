@@ -106,10 +106,12 @@ DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_HERE
 - تحويل العملات التلقائي
 - لوحة التحكم
 - إدارة المستخدمين
+- نظام الطلبات المجانية (خصم 100%)
 
 ### ⏳ يحتاج بيانات اعتماد:
 - PayPal (يعمل المنطق، يحتاج Client ID و Secret)
 - إرسال البريد الإلكتروني (يعمل المنطق، يحتاج بيانات SMTP)
+- Discord Webhook (يعمل المنطق، يحتاج Webhook URL)
 
 ---
 
